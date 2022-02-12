@@ -84,10 +84,6 @@ canvas {
     margin: 0 24px;
 }
 
-#start_modal div.column {
-    
-}
-
 #start_modal p {
     font-size: 12px;
     
@@ -98,31 +94,30 @@ canvas {
     margin-bottom: 12px;
 }
 
-#start_modal input {
+#start_modal input[type=text], #start_modal input[type=number] {
     padding: 6px;
     border: 1px solid #888;
+    margin-bottom: 12px;
     
     font-size: 11px;
     line-height: 1.25;
 }
 
-#start_modal input {
-    margin-bottom: 12px;
+#start_modal input[type=text] {
     
+    width: 180px;
+}
+
+#start_modal input[type=number] {
+    margin-bottom: 12px;
     margin-right: 12px;
     
     width: 120px;
 }
 
-#start_modal input:focus {
+#start_modal input[type=text]:focus, #start_modal input[type=number]:focus {
     border: 1px solid #6bf;
     outline: 1px solid #6bf;
-}
-
-input#start_name {
-    width: 180px;
-    
-    margin-right: 0;
 }
 
 input.invalid {
@@ -130,13 +125,35 @@ input.invalid {
     border: 1px solid #800000;
 }
 
-.button_cont {
+div.box_cont {
+    display: flex;
+    
+    margin-bottom: 12px;
+    
+    user-select: none;
+}
+
+div.box_cont input {
+    margin: 0;
+    margin-right: 4px;
+    height: 16px;
+    display: block;
+}
+
+div.box_cont label {
+    font-size: 12px;
+    line-height: 1.25;
+    display: block;
+}
+
+div.button_cont {
     display: flex;
 }
 
 #start_modal button {
     padding: 6px;
-    border: 2px solid #444;
+    border: 1px solid #444;
+    outline: 1px solid #444;
     
     font-size: 11px;
     line-height: 1.25;
@@ -152,6 +169,7 @@ input.invalid {
 
 #start_modal button:disabled {
     border-color: #888 !important;
+    outline-color: #888 !important;
     color: #888 !important;
 }
 
@@ -170,5 +188,6 @@ input.invalid {
 
 #start_modal #start_play {
     border-color: #208020;
+    outline-color: #208020;
     color: #206020;
 }

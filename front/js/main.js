@@ -716,6 +716,10 @@
         }
     };
     
+    var colorblind = document.getElementById("colorblind");
+    
+    var colors = colorblind.checked ? ["#006ddb", "#920000"] : ["#208020", "#604020"];
+    
     var draw = () => {
         c_2d.clearRect(0, 0, display.width, display.height);
         
@@ -746,7 +750,7 @@
         c_2d.font = chat_font_size + "px \"Atkinson Hyperlegible\", sans-serif";
         
         for (var opp of opps) {
-            c_2d.strokeStyle = opp[9] == 0 ? "#208020" : "#604020";
+            c_2d.strokeStyle = colors[opp[9]];
             
             draw_box(...opp.slice(0, 2), 24, 40, opp[2]);
             draw_box(...opp.slice(0, 2), 12, 12, opp[3]);
@@ -765,7 +769,7 @@
         }
         
         if (!watching) {
-            c_2d.strokeStyle = army == 0 ? "#208020" : "#604020";
+            c_2d.strokeStyle = colors[army];
 
             draw_box(pos[0], pos[1], 24, 40, dir);
             draw_box(pos[0], pos[1], 12, 12, p_dir);
