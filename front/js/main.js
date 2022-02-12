@@ -14,6 +14,8 @@
     var start_play = document.getElementById("start_play");
     var start_watch = document.getElementById("start_watch");
     
+    var colorblind = document.getElementById("colorblind");
+    
     var total_stats = () => {
         var name = start_name.value;
         
@@ -103,6 +105,8 @@
         start_dmg.value = window.localStorage.getItem("stat_dmg") || 80;
         start_rld.value = window.localStorage.getItem("stat_rld") || 20;
         
+        colorblind.checked = +window.localStorage.getItem("colorblind");
+        
         total_stats();
     } catch (info) {
         total_stats();
@@ -137,6 +141,8 @@
             window.localStorage.setItem("stat_dmg", start_dmg.value);
             window.localStorage.setItem("stat_rld", start_rld.value);
         }
+        
+        window.localStorage.setItem("colorblind", +colorblind.checked);
     
         start_cont.style.display = "none";
     } catch (info) {
@@ -230,6 +236,8 @@
     var chat_name = start_name.value;
     var chat_font_size = 11;
     var chat_show = 1;
+    
+    var draw_arrow = 1;
     
     if (!watching) {
         var stat_arm = +start_arm.value;
@@ -716,8 +724,6 @@
         }
     };
     
-    var colorblind = document.getElementById("colorblind");
-    
     var colors = colorblind.checked ? ["#006ddb", "#920000"] : ["#208020", "#604020"];
     
     var draw = () => {
@@ -774,6 +780,18 @@
             draw_box(pos[0], pos[1], 24, 40, dir);
             draw_box(pos[0], pos[1], 12, 12, p_dir);
             draw_box(pos[0] + Math.cos(p_dir) * 16, pos[1] + Math.sin(p_dir) * 16, 4, 20, p_dir);
+            
+            if (draw_arrow) {
+                c_2d.beginPath();
+                c_2d.moveTo(pos[0] + Math.cos(dir + Math.PI) * 10 + display.width / 2, pos[1] + Math.sin(dir + Math.PI) * 10 + display.height / 2);
+                c_2d.lineTo(pos[0] + Math.cos(dir + Math.PI) * 10 + Math.cos(dir + Math.PI + Math.PI / 4) * 8 + display.width / 2, pos[1] + Math.sin(dir + Math.PI) * 10 + Math.sin(dir + Math.PI + Math.PI / 4) * 8 + display.height / 2);
+                c_2d.stroke();
+
+                c_2d.beginPath();
+                c_2d.moveTo(pos[0] + Math.cos(dir + Math.PI) * 10 + display.width / 2, pos[1] + Math.sin(dir + Math.PI) * 10 + display.height / 2);
+                c_2d.lineTo(pos[0] + Math.cos(dir + Math.PI) * 10 + Math.cos(dir + Math.PI - Math.PI / 4) * 8 + display.width / 2, pos[1] + Math.sin(dir + Math.PI) * 10 + Math.sin(dir + Math.PI - Math.PI / 4) * 8 + display.height / 2);
+                c_2d.stroke();
+            }
 
             c_2d.fillStyle = "rgba(136, 0, 0, 0.4)";
             c_2d.strokeStyle = "rgba(136, 0, 0, 0.4)";
