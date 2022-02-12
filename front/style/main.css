@@ -1,0 +1,174 @@
+canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+
+    image-rendering: pixelated;
+}
+
+#modal_cont {
+    width: 100vw;
+    height: 100vh;
+    
+    position: absolute;
+    top: 0;
+    left: 0;
+    
+    background-color: rgba(255, 255, 255, 0.6);
+    
+    display: none;
+    justify-content: center;
+    align-items: center;
+}
+
+#modal {
+    padding: 18px;
+    border: 1px solid #888;
+    
+    font-family: "Atkinson Hyperlegible", sans-serif;
+    
+    background-color: #fff;
+}
+
+#modal p {
+    font-size: 12px;
+    
+    margin-top: 0;
+    margin-bottom: 12px;
+}
+
+#modal input {
+    padding: 6px;
+    border: 1px solid #888;
+    
+    font-size: 11px;
+    line-height: 1.25px;
+}
+
+#modal input:focus {
+    border: 1px solid #6bf;
+    outline: 1px solid #6bf;
+}
+
+#start_cont {
+    width: 100vw;
+    height: 100vh;
+    
+    position: absolute;
+    top: 0;
+    left: 0;
+    
+    background-color: rgba(255, 255, 255, 0.6);
+    
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#start_modal {
+    padding: 24px;
+    border: 1px solid #888;
+    
+    font-family: "Atkinson Hyperlegible", sans-serif;
+    
+    background-color: #fff;
+    
+    display: flex;
+}
+
+#start_modal div.division {
+    width: 1px;
+    
+    background-color: #888;
+    
+    margin: 0 24px;
+}
+
+#start_modal div.column {
+    
+}
+
+#start_modal p {
+    font-size: 12px;
+    
+    margin: 0;
+}
+
+#start_modal p:not(:last-child) {
+    margin-bottom: 12px;
+}
+
+#start_modal input {
+    padding: 6px;
+    border: 1px solid #888;
+    
+    font-size: 11px;
+    line-height: 1.25;
+}
+
+#start_modal input {
+    margin-bottom: 12px;
+    
+    margin-right: 12px;
+    
+    width: 120px;
+}
+
+#start_modal input:focus {
+    border: 1px solid #6bf;
+    outline: 1px solid #6bf;
+}
+
+input#start_name {
+    width: 180px;
+    
+    margin-right: 0;
+}
+
+input.invalid {
+    background-color: hsl(0, 80%, 94%);
+    border: 1px solid #800000;
+}
+
+.button_cont {
+    display: flex;
+}
+
+#start_modal button {
+    padding: 6px;
+    border: 2px solid #444;
+    
+    font-size: 11px;
+    line-height: 1.25;
+    
+    background-color: inherit;
+    
+    cursor: pointer;
+    
+    width: 100%;
+    
+    font-weight: bold;
+}
+
+#start_modal button:disabled {
+    border-color: #888 !important;
+    color: #888 !important;
+}
+
+#start_modal p.or {
+    margin: 12px 0;
+    
+    text-align: center;
+    font-weight: bold;
+}
+
+#start_modal #total_invalid {
+    display: none;
+    
+    font-size: 10px;
+}
+
+#start_modal #start_play {
+    border-color: #208020;
+    color: #206020;
+}

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Tank Game</title>
+        
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta charset="utf-8">
+        
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible&family=Roboto+Mono&display=swap">
+        
+        <link rel="stylesheet" href="style/main.css"/>
+    </head>
+    <body>
+        <canvas id="display"></canvas>
+        
+        <div id="modal_cont">
+            <div id="modal">
+                <p id="prompt"></p>
+                
+                <input id="input" type="text"/>
+            </div>
+        </div>
+        
+        <div id="start_cont">
+            <div id="start_modal">
+                <div class="column">
+                    <p>Name:</p>
+
+                    <input id="start_name" type="text" value="You"/>
+                    
+                    <div class="button_cont">
+                        <button id="start_play">PLAY</button>
+                    </div>
+                    
+                    <p class="or">&ndash; or &ndash;</p>
+                    
+                    
+                    <div class="button_cont">
+                        <button id="start_watch">SPECTATE</button>
+                    </div>
+                </div>
+                
+                <div class="division"></div>
+                
+                <div class="column">
+                    <p>Armor (ARM):</p>
+                    
+                    <input id="start_arm" type="number" value="20" min="0" max="100"/>
+                    
+                    <p>Speed (SPD):</p>
+                    
+                    <input id="start_spd" type="number" value="80" min="0" max="100"/>
+                    
+                    <p>Damage (DMG):</p>
+                    
+                    <input id="start_dmg" type="number" value="80" min="0" max="100"/>
+                    
+                    <p>Reload (RLD):</p>
+                    
+                    <input id="start_rld" type="number" value="20" min="0" max="100"/>
+                    
+                    <p><b>Total:</b> <span id="total">200</span><span id="total_invalid"> (must sum to 200)</span></p>
+                </div>
+            </div>
+        </div>
+        
+        <script src="js/main.js"></script>
+    </body>
+</html>
