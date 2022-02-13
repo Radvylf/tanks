@@ -207,28 +207,6 @@
         display.height = window.innerHeight;
     })();
     
-    var draw_box = (x, y, sx, sy, r = 0) => {
-        var cos_r = Math.cos(r);
-        var sin_r = Math.sin(r);
-        
-        sx /= 2;
-        sy /= 2;
-        
-        var offset = ([x, y], d, w) => [x + Math.cos(r + d) * w, y + Math.sin(r + d) * w];
-        
-        x += display.width / 2;
-        y += display.height / 2;
-        
-        c_2d.beginPath();
-        c_2d.moveTo(...offset(offset([x, y], Math.PI / 2, sx), 0, sy));
-        c_2d.lineTo(...offset(offset([x, y], Math.PI * 3 / 2, sx), 0, sy));
-        c_2d.lineTo(...offset(offset([x, y], Math.PI * 3 / 2, sx), Math.PI, sy));
-        c_2d.lineTo(...offset(offset([x, y], Math.PI / 2, sx), Math.PI, sy));
-        c_2d.closePath();
-        
-        c_2d.stroke();
-    };
-    
     var auto = 0;
     
     var chat = [];
@@ -276,10 +254,12 @@
     
     var c_pos = [0, 0];
     
+    var pos = watching ? [0, 0] : [Infinity, Infinity];
+    var dir = 0;
+    var p_dir = 0;
+    var chg = [0, 0, 0];
+    
     window.onkeydown = (info) => {
-        if (watching)
-            return;
-        
         if (prompting)
             return;
         
@@ -298,7 +278,7 @@
     window.onkeyup = async (info) => {
         var id = info.code.startsWith("Key") ? info.code.slice(3).toLowerCase() : info.code;
         
-        if (id == "t" && !buttons["t"]) {
+        if (id == "t") {
             if (!prompting && ws.readyState == 1) {
                 var chat_input = await prompt_for_input("Chat:");
                 
@@ -310,14 +290,12 @@
             }
         }
         
+        if (watching && id == "k")
+            pos = [0, 0];
+        
         if (id in buttons)
             buttons[id] = 0;
     };
-    
-    var pos = [Infinity, Infinity];
-    var dir = 0;
-    var p_dir = 0;
-    var chg = [0, 0, 0];
     
     var rir = 0;
     var ri_nc = 0;
@@ -335,16 +313,44 @@
     
     var ttrd = 0;
     
-    var walls = [
-        [0, -250, 750, 15, Math.PI / 2],
-        [0, 250, 750, 15, Math.PI / 2],
-        [-225, 0, 15, 200, Math.PI / 2],
-        [225, 0, 15, 200, Math.PI / 2]
-    ];
+    var walls = [];
     
     var opps = [];
     
     var trails = [];
+    
+    var scrolling = 1;
+    
+    var from_pos = (...point) => {
+        var pos2 = [...pos];
+        
+        if (!scrolling)
+            pos2 = [0, 0];
+        
+        return [
+            point[0] - pos[0] + display.width / 2,
+            point[1] - pos[1] + display.height / 2
+        ];
+    };
+    
+    var draw_box = (x, y, sx, sy, r = 0) => {
+        var cos_r = Math.cos(r);
+        var sin_r = Math.sin(r);
+        
+        sx /= 2;
+        sy /= 2;
+        
+        var offset = ([x, y], d, w) => [x + Math.cos(r + d) * w, y + Math.sin(r + d) * w];
+        
+        c_2d.beginPath();
+        c_2d.moveTo(...from_pos(...offset(offset([x, y], Math.PI / 2, sx), 0, sy)));
+        c_2d.lineTo(...from_pos(...offset(offset([x, y], Math.PI * 3 / 2, sx), 0, sy)));
+        c_2d.lineTo(...from_pos(...offset(offset([x, y], Math.PI * 3 / 2, sx), Math.PI, sy)));
+        c_2d.lineTo(...from_pos(...offset(offset([x, y], Math.PI / 2, sx), Math.PI, sy)));
+        c_2d.closePath();
+        
+        c_2d.stroke();
+    };
     
     var collision = (p, d, x, y, sx, sy, d_2, id = null) => {
         x -= p[0];
@@ -525,7 +531,7 @@
             if (c_pos[1] <= (10 ** -10))
                 c_pos = [p_dir - dir, 1];
 
-            p_off = (Math.atan2(Math.sin(c_pos[0]) * c_pos[1] - pos[1], Math.cos(c_pos[0]) * c_pos[1] - pos[0]) % (Math.PI * 2) + (Math.PI * 2)) % (Math.PI * 2) - dir;
+            p_off = (c_pos[0] % (Math.PI * 2) + (Math.PI * 2)) % (Math.PI * 2) - dir;
         }
         
         if (p_off > Math.PI)
@@ -547,17 +553,27 @@
         p_dir = p_off + dir;
     };
     
-    var tick = () => {
+    var scroll_spd = 2;
+    
+    var watching_tick = () => {
+        if (buttons["w"] || buttons["ArrowUp"])
+            pos[1] -= scroll_spd;
+        if (buttons["a"] || buttons["ArrowLeft"])
+            pos[0] -= scroll_spd;
+        if (buttons["d"] || buttons["ArrowRight"])
+            pos[0] += scroll_spd;
+        if (buttons["s"] || buttons["ArrowDown"])
+            pos[1] += scroll_spd;
+        
         for (var opp of opps) {
             opp[0] += Math.cos(opp[2]) * opp[4][0];
             opp[1] += Math.sin(opp[2]) * opp[4][0];
             opp[2] += opp[4][1];
             opp[3] += opp[4][2];
         }
-        
-        if (watching)
-            return;
-        
+    };
+    
+    var tick = () => {
         if (!ttrm && (down || buttons["Space"] || buttons["o"] || buttons["x"]))
             window.onclick();
         
@@ -641,6 +657,13 @@
             ttr--;
         if (ttrm)
             ttrm--;
+        
+        for (var opp of opps) {
+            opp[0] += Math.cos(opp[2]) * opp[4][0];
+            opp[1] += Math.sin(opp[2]) * opp[4][0];
+            opp[2] += opp[4][1];
+            opp[3] += opp[4][2];
+        }
     };
     
     window.onmousemove = (info) => {
@@ -737,8 +760,8 @@
             }
             
             c_2d.beginPath();
-            c_2d.moveTo(t[1][0][0] + display.width / 2, t[1][0][1] + display.height / 2);
-            c_2d.lineTo(t[1][1][0] + display.width / 2, t[1][1][1] + display.height / 2);
+            c_2d.moveTo(...from_pos(...t[1][0]));
+            c_2d.lineTo(...from_pos(...t[1][1]));
             
             c_2d.stroke();
         }
@@ -747,9 +770,8 @@
         
         var i = 0;
         
-        for (var w of walls) {
+        for (var w of walls)
             draw_box(...w);
-        }
         
         c_2d.textAlign = "center";
         c_2d.textBaseline = "bottom";
@@ -765,13 +787,13 @@
             c_2d.fillStyle = "rgba(136, 0, 0, 0.4)";
             c_2d.strokeStyle = "rgba(136, 0, 0, 0.4)";
             
-            c_2d.fillRect(opp[0] - 14 + display.width / 2, opp[1] - 14 + display.height / 2, (opp[5] / 100) * 28, 3);
-            c_2d.strokeRect(opp[0] - 14 + display.width / 2, opp[1] - 14 + display.height / 2, 28, 2);
+            c_2d.fillRect(...from_pos(opp[0] - 14, opp[1] - 14), (opp[5] / 100) * 28, 3);
+            c_2d.strokeRect(...from_pos(opp[0] - 14, opp[1] - 14), 28, 2);
             
             c_2d.fillStyle = "#000000";
             c_2d.strokeStyle = "#000000";
             
-            c_2d.fillText(opp[7], opp[0] + display.width / 2, opp[1] - 18 + display.height / 2);
+            c_2d.fillText(opp[7], ...from_pos(opp[0], opp[1] - 18));
         }
         
         if (!watching) {
@@ -783,21 +805,23 @@
             
             if (draw_arrow) {
                 c_2d.beginPath();
-                c_2d.moveTo(pos[0] + Math.cos(dir + Math.PI) * 10 + display.width / 2, pos[1] + Math.sin(dir + Math.PI) * 10 + display.height / 2);
-                c_2d.lineTo(pos[0] + Math.cos(dir + Math.PI) * 10 + Math.cos(dir + Math.PI + Math.PI / 4) * 8 + display.width / 2, pos[1] + Math.sin(dir + Math.PI) * 10 + Math.sin(dir + Math.PI + Math.PI / 4) * 8 + display.height / 2);
+                c_2d.moveTo(...from_pos(pos[0] + Math.cos(dir + Math.PI) * 10, pos[1] + Math.sin(dir + Math.PI) * 10));
+                c_2d.lineTo(...from_pos(pos[0] + Math.cos(dir + Math.PI) * 10 + Math.cos(dir + Math.PI + Math.PI / 4) * 8, pos[1] + Math.sin(dir + Math.PI) * 10 + Math.sin(dir + Math.PI + Math.PI / 4) * 8));
+                
                 c_2d.stroke();
 
                 c_2d.beginPath();
-                c_2d.moveTo(pos[0] + Math.cos(dir + Math.PI) * 10 + display.width / 2, pos[1] + Math.sin(dir + Math.PI) * 10 + display.height / 2);
-                c_2d.lineTo(pos[0] + Math.cos(dir + Math.PI) * 10 + Math.cos(dir + Math.PI - Math.PI / 4) * 8 + display.width / 2, pos[1] + Math.sin(dir + Math.PI) * 10 + Math.sin(dir + Math.PI - Math.PI / 4) * 8 + display.height / 2);
+                c_2d.moveTo(...from_pos(pos[0] + Math.cos(dir + Math.PI) * 10, pos[1] + Math.sin(dir + Math.PI) * 10));
+                c_2d.lineTo(...from_pos(pos[0] + Math.cos(dir + Math.PI) * 10 + Math.cos(dir + Math.PI - Math.PI / 4) * 8, pos[1] + Math.sin(dir + Math.PI) * 10 + Math.sin(dir + Math.PI - Math.PI / 4) * 8));
+                
                 c_2d.stroke();
             }
 
             c_2d.fillStyle = "rgba(136, 0, 0, 0.4)";
             c_2d.strokeStyle = "rgba(136, 0, 0, 0.4)";
 
-            c_2d.fillRect(pos[0] - 14 + display.width / 2, pos[1] - 14 + display.height / 2, (hp / 100) * 28, 3);
-            c_2d.strokeRect(pos[0] - 14 + display.width / 2, pos[1] - 14 + display.height / 2, 28, 2);
+            c_2d.fillRect(...from_pos(pos[0] - 14, pos[1] - 14), (hp / 100) * 28, 3);
+            c_2d.strokeRect(...from_pos(pos[0] - 14, pos[1] - 14), 28, 2);
 
             c_2d.fillStyle = "#000000";
             c_2d.strokeStyle = "#000000";
@@ -837,7 +861,7 @@
     };
     
     setInterval(() => {
-        tick();
+        watching ? watching_tick() : tick();
         
         draw();
     }, 25);
@@ -872,15 +896,17 @@
         data = JSON.parse(data.data.toString());
         
         if (data.start) {
-            pos = data.start.pos;
-            army = data.start.army;
-            
-            dir = army == 0 ? 0 : Math.PI;
-            p_dir = dir;
-            
             chat = chat.concat(data.start.chat).slice(-chat_count);
             
+            walls = data.start.walls;
+            
             if (!watching) {
+                pos = data.start.pos;
+                army = data.start.army;
+
+                dir = army == 0 ? 0 : Math.PI;
+                p_dir = dir;
+                
                 setInterval(() => {
                     if (ws.readyState != 1)
                         return;

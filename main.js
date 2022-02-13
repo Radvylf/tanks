@@ -3,10 +3,14 @@
     var tanks = [];
     
     var walls = [
-        [0, -250, 750, 10, Math.PI / 2],
-        [0, 250, 750, 10, Math.PI / 2],
-        [-225, 0, 10, 125, Math.PI / 2],
-        [225, 0, 10, 125, Math.PI / 2]
+        [0, -250, 750, 15, Math.PI / 2],
+        [0, 250, 750, 15, Math.PI / 2],
+        [-225, 60, 15, 80, Math.PI / 2],
+        [-225, 0, 10, 40, Math.PI / 2],
+        [-225, -60, 15, 80, Math.PI / 2],
+        [225, 60, 15, 80, Math.PI / 2],
+        [225, 0, 10, 40, Math.PI / 2],
+        [225, -60, 15, 80, Math.PI / 2]
     ];
 
     var r_shot = new Set();
@@ -66,7 +70,7 @@
                         if (!conn.id2 || !conn.n || typeof data.c != "string")
                             throw 1;
 
-                        chat.push([tick, "[" + conn.n + "] " + data.c]);
+                        chat.push([tick, "{" + conn.n + "} " + data.c]);
 
                         return;
                     }
@@ -83,6 +87,9 @@
                 data = JSON.parse(data.toString());
 
                 if ("bt" in data) {
+                    if (!conn.id || !tanks.find(t => t.id == conn.id && t.hp > 0))
+                        return;
+                    
                     if (typeof data.bt[0][0] != "number" || typeof data.bt[0][1] != "number" || Number.isNaN(data.bt[0][0]) || Number.isNaN(data.bt[0][1]))
                         throw 0;
                     if (typeof data.bt[1][0] != "number" || typeof data.bt[1][1] != "number" || Number.isNaN(data.bt[1][0]) || Number.isNaN(data.bt[1][1]))
@@ -92,6 +99,9 @@
                         if (!tank_stats.some(t => t.id == data.hit) && !r_shot.has(data.hit))
                             throw data.hit;
                         
+                        if (tanks.find(t => t.id == data.hit).hp < 0)
+                            return;
+                        
                         r_shot.add(data.hit);
                         
                         if (tanks.some(t => t.id == data.hit)) {
@@ -99,7 +109,7 @@
                             var arm = 1 - 1 / 2.5 ** ((tank_stats.find(t => t.id == data.hit).stat_arm * 3) / 100);
                             
                             if ((tanks.find(t => t.id == data.hit).hp -= dmg * (1 - arm)) < 0)
-                                chat.push([tick, tank_stats.find(t => t.id == data.hit).n + " was shot by " + tank_stats.find(t => t.id == conn.id).n]);
+                                chat.push([tick, tank_stats.find(t => t.id == data.hit).n + " was killed by " + tank_stats.find(t => t.id == conn.id).n]);
                         }
                     }
 
@@ -183,7 +193,8 @@
                         start: {
                             pos: pos,
                             army: data.start.army,
-                            chat: chat.slice(-100).map(c => c[1])
+                            chat: chat.slice(-100).map(c => c[1]),
+                            walls: walls
                         }
                     }));
                     
