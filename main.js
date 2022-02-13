@@ -86,6 +86,9 @@
             try {
                 data = JSON.parse(data.toString());
 
+                // if ("start" in data)
+                //    console.log(data);
+
                 if ("bt" in data) {
                     if (!conn.id || !tanks.find(t => t.id == conn.id && t.hp > 0))
                         return;
