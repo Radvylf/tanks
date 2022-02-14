@@ -6,7 +6,7 @@
     var pos = [0, 0];
     var dir = 0;
     var p_dir = 0;
-    var chg = [0, 0, 0];
+    var chg = [0, 0];
     
     var ttr = 0;
     var ttrm = 0;
@@ -14,7 +14,7 @@
     
     var hp = 100;
     
-    var opps = [];
+    var tanks = [];
     var trails = [];
     var walls = [];
     
@@ -39,11 +39,10 @@
         for (var t of trails)
             t[0]--;
         
-        for (var opp of opps) {
-            opp[0] += Math.cos(opp[2]) * opp[4][0];
-            opp[1] += Math.sin(opp[2]) * opp[4][0];
-            opp[2] += opp[4][1];
-            opp[3] += opp[4][2];
+        for (var tank of tanks) {
+            tank.pos[0] += Math.cos(tank.dir) * tank.chg[0];
+            tank.pos[1] += Math.sin(tank.dir) * tank.chg[0];
+            tank.dir += tank.chg[1];
         }
     };
     
@@ -182,13 +181,13 @@
         for (var wall of walls)
             coll = Math.min(coll, collision([pos[0] + Math.cos(p_dir) * 26, pos[1] + Math.sin(p_dir) * 26], p_dir, ...wall));
         
-        for (var opp of opps) {
-            c = collision([pos[0] + Math.cos(p_dir) * 26, pos[1] + Math.sin(p_dir) * 26], p_dir, ...opp.slice(0, 2), 24, 40, opp[2]);
+        for (var tank of tanks) {
+            c = collision([pos[0] + Math.cos(p_dir) * 26, pos[1] + Math.sin(p_dir) * 26], p_dir, ...tank.pos, 24, 40, tank.dir);
             
             if (c <= coll) {
                 coll = c;
                 
-                coll_id = opp[9] == army ? -1 : opp[8];
+                coll_id = tank.army == army ? -1 : tank.id;
             }
         }
         
@@ -212,8 +211,8 @@
         
         if (Tanks.ws_on()) {
             Tanks.ws({
-                bt: [[pos[0] + Math.cos(p_dir) * 26, pos[1] + Math.sin(p_dir) * 26], [pos[0] + Math.cos(p_dir) * (26 + coll), pos[1] + Math.sin(p_dir) * (26 + coll)]],
-                hit: coll_id == -1 ? undefined : coll_id
+                t: "b",
+                b: [[pos[0] + Math.cos(p_dir) * 26, pos[1] + Math.sin(p_dir) * 26], [pos[0] + Math.cos(p_dir) * (26 + coll), pos[1] + Math.sin(p_dir) * (26 + coll)], coll_id == -1 ? undefined : coll_id]
             });
         }
     };
@@ -287,9 +286,9 @@
                 for (var wall of walls)
                     coll = Math.min(coll, box_collision(...pos, 24, 40, dir + (ds[0] == -1 ? Math.PI : 0), ...wall));
 
-                for (var opp of opps)
-                    if (opp[9] != army)
-                        coll = Math.min(coll, box_collision(...pos, 24, 40, dir + (ds[0] == -1 ? Math.PI : 0), ...opp.slice(0, 2), 24, 40, opp[2]));
+                for (var tank of tanks)
+                    if (tank.army != army)
+                        coll = Math.min(coll, box_collision(...pos, 24, 40, dir + (ds[0] == -1 ? Math.PI : 0), ...tank.pos, 24, 40, tank.dir));
                 
                 if (coll < -0.02 + 10 ** -10)
                     coll = -0.1;
@@ -301,16 +300,16 @@
                 return;
             }
 
-            var coll = Math.sqrt(spd) / 48;
+            var coll = Math.sqrt(spd) / 32;
             
             var will_coll = 0;
             
             for (var wall of walls)
                 will_coll = will_coll || box_is_coll(...pos, 24, 40, dir + coll * ds[0], ...wall);
             
-            for (var opp of opps)
-                if (opp[9] != army)
-                    will_coll = will_coll || box_is_coll(...pos, 24, 40, dir + coll * ds[0], ...opp.slice(0, 2), 24, 40, opp[2]);
+            for (var tank of tanks)
+                if (tank.army != army)
+                    will_coll = will_coll || box_is_coll(...pos, 24, 40, dir + coll * ds[0], ...tank.pos, 24, 40, tank.dir);
             
             if (!will_coll) {
                 dir = ((dir + coll * ds[0]) % (Math.PI * 2) + (Math.PI * 2)) % (Math.PI * 2);
@@ -331,11 +330,10 @@
         for (var t of trails)
             t[0]--;
         
-        for (var opp of opps) {
-            opp[0] += Math.cos(opp[2]) * opp[4][0];
-            opp[1] += Math.sin(opp[2]) * opp[4][0];
-            opp[2] += opp[4][1];
-            opp[3] += opp[4][2];
+        for (var tank of tanks) {
+            tank.pos[0] += Math.cos(tank.dir) * tank.chg[0];
+            tank.pos[1] += Math.sin(tank.dir) * tank.chg[0];
+            tank.dir += tank.chg[1];
         }
     };
     
@@ -354,7 +352,7 @@
     
     Tanks.hp = () => hp;
     
-    Tanks.opps = () => JSON.parse(JSON.stringify(opps));
+    Tanks.tanks = () => JSON.parse(JSON.stringify(tanks));
     Tanks.trails = () => JSON.parse(JSON.stringify(trails));
     Tanks.walls = () => JSON.parse(JSON.stringify(walls));
     
@@ -381,6 +379,7 @@
             p_dir = dir;
         }
         
+        tanks = data.tanks;
         walls = data.walls;
         
         Tanks.push_chat(data.chat);
@@ -395,12 +394,49 @@
     };
     
     Tanks.incoming = (data) => {
-        opps = data[0];
-        trails = trails.concat(data[1].map(t => [2, t]));
-        
-        Tanks.push_chat(data[2]);
-
-        if (!Tanks.watching())
-            hp = data[3];
+        switch (data[0]) {
+            case "s":
+                if (data[1].id != Tanks.id())
+                    tanks.push(data[1]);
+                
+                break;
+            case "p":
+                var tank = tanks.find(t => t.id == data[1]);
+                
+                if (!tank)
+                    break;
+                
+                tank.pos[0] = data[2][0];
+                tank.pos[1] = data[2][1];
+                tank.dir = data[2][2];
+                tank.p_dir = data[2][3];
+                tank.chg[0] = data[2][4];
+                tank.chg[1] = data[2][5];
+                
+                break;
+            case "k":
+                if (data[1] == Tanks.id()) {
+                    hp = data[2];
+                    
+                    break;
+                }
+                
+                var tank = tanks.find(t => t.id == data[1]);
+                
+                if (!tank)
+                    break;
+                
+                tank.hp = data[2];
+                
+                if (!data[2])
+                    tanks = tanks.filter(t => t.id != data[1]);
+                
+                break;
+            case "b":
+                if (data[1] != Tanks.id())
+                    trails.push([2, data.slice(2)]);
+                
+                break;
+        }
     };
 })();

@@ -48,6 +48,7 @@
 
                     if (chat_input && Tanks.ws_on()) {
                         Tanks.ws({
+                            t: "c",
                             c: chat_input
                         });
                     }

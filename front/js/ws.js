@@ -23,11 +23,16 @@
         var was_on = 0;
         
         ws.onopen = () => {
+            was_on = 1;
+            
+            r(1);
+            
             if (watching) {
                 ws.send(JSON.stringify({
-                    start: {
+                    t: "s",
+                    s: {
                         id2: id2,
-                        n: Tanks.name()
+                        name: Tanks.name()
                     }
                 }));
 
@@ -35,46 +40,49 @@
             }
 
             ws.send(JSON.stringify({
-                start: {
+                t: "s",
+                s: {
                     id: Tanks.id(),
                     id2: id2,
-                    stat_arm: Tanks.stat().arm,
-                    stat_spd: Tanks.stat().spd,
-                    stat_dmg: Tanks.stat().dmg,
-                    stat_rld: Tanks.stat().rld,
-                    n: Tanks.name()
+                    stat: Tanks.stat(),
+                    name: Tanks.name()
                 }
             }));
-            
-            was_on = 1;
-            
-            r(1);
         };
         
         ws.onmessage = (data) => {
             data = JSON.parse(data.data.toString());
-
-            if (data.start) {
-                Tanks.start_incoming(data.start);
-
-                setInterval(() => {
-                    if (!Tanks.ws_on())
-                        return;
-
-                    Tanks.ws({
-                        id: Tanks.id(),
-                        pos: Tanks.pos(),
-                        dir: Tanks.dir(),
-                        p_dir: Tanks.p_dir(),
-                        chg: Tanks.chg(),
-                        ttr: Tanks.ttr()
-                    });
-                }, 100);
-
-                return;
-            }
             
-            Tanks.incoming(data);
+            for (var d of data) {
+                switch (d[0]) {
+                    case "sy":
+                        Tanks.start_incoming(d[1]);
+
+                        if (!Tanks.watching())
+                            setInterval(() => {
+                                if (!Tanks.ws_on())
+                                    return;
+
+                                Tanks.ws({
+                                    t: "p",
+                                    p: [...Tanks.pos(), Tanks.dir(), Tanks.p_dir(), ...Tanks.chg()]
+                                });
+                            }, 100);
+                        
+                        break;
+                    case "s":
+                    case "p":
+                    case "k":
+                    case "b":
+                        Tanks.incoming(d);
+                        
+                        break;
+                    case "c":
+                        Tanks.push_chat([d[1]]);
+                        
+                        break;
+                }
+            }
         };
 
         ws.onclose = (info) => {

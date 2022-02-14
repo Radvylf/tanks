@@ -1,6 +1,8 @@
 (async () => {
-    var tank_stats = [];
     var tanks = [];
+    
+    var tick = 0;
+    var tick_logs = [];
     
     var walls = [
         [0, -250, 750, 15, Math.PI / 2],
@@ -13,261 +15,261 @@
         [225, -60, 15, 80, Math.PI / 2]
     ];
 
-    var r_shot = new Set();
-
-    var tick = 0;
-
-    var trails = [];
-
     var chat = [];
-
-    setInterval(() => {
-        tick++;
-
-        for (var t of trails) {
-            if (t[0] < tick - 100) {
-                t.drop = 1;
-
-                continue;
-            }
-        }
-
-        trails = trails.filter(t => !t.drop);
-    }, 25);
-
-    var WS = require("ws").WebSocketServer;
-
-    var wss = new WS({
-        port: 8010
-    });
+    
+    var Conn = require("./src/conn");
+    var ws = require("./src/ws")(Conn);
+    
+    var fround = (x) => Math.round(x * 32768) / 32768;
 
     var conns = [];
-
-    wss.on("connection", (conn, data) => {
+    
+    ws.on("conn", (conn) => {
         conns.push(conn);
         
-        conn.conn_info = data.headers["x-forwarded-for"].trim();
-        
-        if (conn.protocol == "watch") {
-            conn.watching = 1;
-            
-            conn.on("message", (data) => {
+        conn.on("data", (data) => {
+            try {
                 try {
                     data = JSON.parse(data.toString());
-                    
-                    if ("start" in data) {
-                        if (!data.start.id2.match(/^[A-Za-z0-9\-_]{6}\*?$/) || data.start.id2.slice(-1) == "*" && conns.some(c => c.id2 == data.start.id2))
-                            throw data.start.id2;
-                        if (typeof data.start.n != "string" || data.start.n.length > 28)
-                            throw data.start.n;
-                        
-                        conn.id2 = data.start.id2;
-                        conn.n = data.start.n;
-                        conn.tick = tick;
-                    }
-                    
-                    if ("c" in data) {
-                        if (!conn.id2 || !conn.n || typeof data.c != "string")
-                            throw 1;
-
-                        chat.push([tick, "{" + conn.n + "} " + data.c]);
-
-                        return;
-                    }
                 } catch (info) {
-                    conn.close();
+                    throw [];
                 }
-            });
-            
-            return;
-        }
-
-        conn.on("message", (data) => {
-            try {
-                data = JSON.parse(data.toString());
-
-                // if ("start" in data)
-                //    console.log(data);
-
-                if ("bt" in data) {
-                    if (!conn.id || !tanks.find(t => t.id == conn.id && t.hp > 0))
-                        return;
-                    
-                    if (typeof data.bt[0][0] != "number" || typeof data.bt[0][1] != "number" || Number.isNaN(data.bt[0][0]) || Number.isNaN(data.bt[0][1]))
-                        throw 0;
-                    if (typeof data.bt[1][0] != "number" || typeof data.bt[1][1] != "number" || Number.isNaN(data.bt[1][0]) || Number.isNaN(data.bt[1][1]))
-                        throw 1;
-                        
-                    if (data.hit) {
-                        if (!tank_stats.some(t => t.id == data.hit) && !r_shot.has(data.hit))
-                            throw data.hit;
-                        
-                        if (tanks.find(t => t.id == data.hit).hp < 0)
-                            return;
-                        
-                        r_shot.add(data.hit);
-                        
-                        if (tanks.some(t => t.id == data.hit)) {
-                            var dmg = 2.5 ** ((tank_stats.find(t => t.id == conn.id).stat_dmg * 3) / 100) * 10;
-                            var arm = 1 - 1 / 2.5 ** ((tank_stats.find(t => t.id == data.hit).stat_arm * 3) / 100);
+                
+                if (!("t" in data))
+                    throw [];
+                
+                switch (data.t) {
+                    case "s":
+                        if (conn.protocol == "watch") {
+                            if (!data.s.id2.match(/^[A-Za-z0-9\-_]{6}\*?$/) || data.s.id2.slice(-1) == "*" && conns.some(c => c.id2 == data.s.id2))
+                                throw [];
                             
-                            if ((tanks.find(t => t.id == data.hit).hp -= dmg * (1 - arm)) < 0)
-                                chat.push([tick, tank_stats.find(t => t.id == data.hit).n + " was killed by " + tank_stats.find(t => t.id == conn.id).n]);
+                            if (typeof data.s.name != "string" || data.s.name.length < 2 || data.s.name.length > 28)
+                                throw ["Name must be 2 to 28 characters"];
+
+                            conn.id2 = data.s.id2;
+                            conn.name = data.s.name;
+
+                            conn.data([["sy", {
+                                tanks: tanks.filter(t => t.id != conn.id).map(t => ({
+                                    id: t.id,
+                                    name: t.name,
+                                    pos: t.pos,
+                                    dir: t.dir,
+                                    p_dir: t.p_dir,
+                                    chg: t.chg,
+                                    hp: t.hp,
+                                    army: t.army
+                                })),
+                                walls: walls,
+                                chat: chat.slice(-100)
+                            }]]);
+                            
+                            break;
                         }
-                    }
-
-                    trails.push([tick, [[data.bt[0][0], data.bt[0][1]], [data.bt[1][0], data.bt[1][1]]], conn.id]);
-
-                    return;
-                }
-
-                if ("c" in data) {
-                    if (typeof data.c != "string")
-                        throw 1;
-
-                    chat.push([tick, "[" + tank_stats.find(t => t.id == conn.id).n + "] " + data.c]);
-
-                    return;
-                }
-
-                if (data.start) {
-                    if (conn.id) {
-                        tank_stats = tank_stats.filter(t => t.id != conn.id);
-                        tanks = tanks.filter(t => t.id != conn.id);
-                    }
-                    
-                    if (data.start.id.length != 8 || data.start.id.match(/[^A-Za-z0-9\-_]/) || tank_stats.some(t => t.id == data.start.id))
-                        throw data.start.id;
-                    if (!data.start.id2.match(/^[A-Za-z0-9\-_]{6}\*?$/) || data.start.id2.slice(-1) == "*" && conns.some(c => c.id2 == data.start.id2))
-                        throw data.start.id2;
-                    
-                    if (data.start.stat_arm < 0 || data.start.stat_arm > 100 || !Number.isInteger(data.start.stat_arm))
-                        throw data.start.stat_arm;
-                    if (data.start.stat_spd < 0 || data.start.stat_spd > 100 || !Number.isInteger(data.start.stat_spd))
-                        throw data.start.stat_spd;
-                    if (data.start.stat_dmg < 0 || data.start.stat_dmg > 100 || !Number.isInteger(data.start.stat_dmg))
-                        throw data.start.stat_dmg;
-                    if (data.start.stat_rld < 0 || data.start.stat_rld > 100 || !Number.isInteger(data.start.stat_rld))
-                        throw data.start.stat_rld;
-                    if (data.start.stat_arm + data.start.stat_spd + data.start.stat_dmg + data.start.stat_rld != 200)
-                        throw 200;
-                    if (typeof data.start.n != "string" || data.start.n.length > 28)
-                        throw data.start.n;
-                    if ("army" in data.start && data.start.army != null && (typeof data.start.army != "number" || data.start.army != 0 && data.start.army != 1))
-                        throw data.start.army;
-
-                    conn.id = data.start.id;
-                    conn.id2 = data.start.id2;
-                    conn.tick = tick;
-                    
-                    if (!("army" in data.start) || data.start.army == null) {
-                        var count = [0, 0];
                         
-                        for (var tank of tank_stats)
-                            count[tank.army]++;
+                        if ("id" in conn)
+                            throw [];
                         
-                        data.start.army = count[0] == count[1] ? (Math.random() * 2 | 0) : count[0] < count[1] ? 0 : 1;
-                    }
-                    
-                    tank_stats.push({
-                        id: data.start.id,
-                        stat_arm: data.start.stat_arm,
-                        stat_spd: data.start.stat_spd,
-                        stat_dmg: data.start.stat_dmg,
-                        stat_rld: data.start.stat_rld,
-                        n: data.start.n,
-                        army: data.start.army
-                    });
-                    
-                    var pos = data.start.army == 0 ? [-300 + (Math.random() * 75 - 37.5), (Math.random() * 100 - 50)] : [300 + (Math.random() * 75 - 37.5), (Math.random() * 100 - 50)];
-                    
-                    tanks.push({
-                        id: data.start.id,
-                        pos: pos,
-                        dir: data.start.army == 0 ? 0 : Math.PI,
-                        p_dir: data.start.army == 0 ? 0 : Math.PI,
-                        chg: [0, 0, 0],
-                        hp: 100,
-                        ttr: 0,
-                        n: data.start.n
-                    });
+                        if (data.s.id.length != 8 || data.s.id.match(/[^A-Za-z0-9\-_]/) || tanks.some(t => t.id == data.s.id))
+                            throw [];
+                        if (!data.s.id2.match(/^[A-Za-z0-9\-_]{6}\*?$/) || data.s.id2.slice(-1) == "*" && conns.some(c => c.id2 == data.s.id2))
+                            throw [];
 
-                    conn.send(JSON.stringify({
-                        start: {
+                        if (data.s.stat.arm < 0 || data.s.stat.arm > 100 || !Number.isInteger(data.s.stat.arm))
+                            throw ["All stats must be integers between 0 and 100, and sum to 200"];
+                        if (data.s.stat.spd < 0 || data.s.stat.spd > 100 || !Number.isInteger(data.s.stat.spd))
+                            throw ["All stats must be integers between 0 and 100, and sum to 200"];
+                        if (data.s.stat.dmg < 0 || data.s.stat.dmg > 100 || !Number.isInteger(data.s.stat.dmg))
+                            throw ["All stats must be integers between 0 and 100, and sum to 200"];
+                        if (data.s.stat.rld < 0 || data.s.stat.rld > 100 || !Number.isInteger(data.s.stat.rld))
+                            throw ["All stats must be integers between 0 and 100, and sum to 200"];
+                        
+                        if (data.s.stat.arm + data.s.stat.spd + data.s.stat.dmg + data.s.stat.rld != 200)
+                            throw ["All stats must be integers between 0 and 100, and sum to 200"];
+                        
+                        if (typeof data.s.name != "string" || data.s.name.length < 2 || data.s.name.length > 28)
+                            throw ["Name must be 2 to 28 characters"];
+                        
+                        if ("army" in data.s && data.s.army != null && (typeof data.s.army != "number" || data.s.army != 0 && data.s.army != 1))
+                            throw [];
+
+                        conn.id = data.s.id;
+                        conn.id2 = data.s.id2;
+                        conn.name = data.s.name;
+
+                        if (!("army" in data.s) || data.s.army == null) {
+                            var count = [0, 0];
+
+                            for (var tank of tanks)
+                                count[tank.army]++;
+
+                            data.s.army = count[0] == count[1] ? (Math.random() * 2 | 0) : count[0] < count[1] ? 0 : 1;
+                        }
+
+                        var pos = data.s.army == 0 ? [fround(-300 + (Math.random() * 75 - 37.5)), fround(Math.random() * 100 - 50)] : [fround(300 + (Math.random() * 75 - 37.5)), fround(Math.random() * 100 - 50)];
+
+                        tanks.push({
+                            id: data.s.id,
+                            stat: data.s.stat,
+                            name: data.s.name,
                             pos: pos,
-                            army: data.start.army,
-                            chat: chat.slice(-100).map(c => c[1]),
-                            walls: walls
+                            dir: data.s.army == 0 ? 0 : Math.PI,
+                            p_dir: data.s.army == 0 ? 0 : Math.PI,
+                            chg: [0, 0],
+                            hp: 100,
+                            army: data.s.army
+                        });
+                        
+                        tick_logs.push(["s", {
+                            id: data.s.id,
+                            name: data.s.name,
+                            pos: pos,
+                            dir: data.s.army == 0 ? 0 : Math.PI,
+                            p_dir: data.s.army == 0 ? 0 : Math.PI,
+                            chg: [0, 0],
+                            hp: 100,
+                            army: data.s.army
+                        }]);
+
+                        conn.data([["sy", {
+                            pos: pos,
+                            army: data.s.army,
+                            tanks: tanks.filter(t => t.id != conn.id).map(t => ({
+                                id: t.id,
+                                name: t.name,
+                                pos: t.pos,
+                                dir: t.dir,
+                                p_dir: t.p_dir,
+                                chg: t.chg,
+                                hp: t.hp,
+                                army: t.army
+                            })),
+                            walls: walls,
+                            chat: chat.slice(-100)
+                        }]]);
+                        
+                        break;
+                    case "p":
+                        if (!conn.id || !tanks.some(t => t.id == conn.id && t.hp > 0))
+                            break;
+                        
+                        var t = tanks.find(t => t.id == conn.id);
+                        
+                        if (typeof data.p[0] != "number" || typeof data.p[1] != "number" || Number.isNaN(data.p[0]) || Number.isNaN(data.p[1]))
+                            throw [];
+                        if (typeof data.p[2] != "number" || Number.isNaN(data.p[2]))
+                            throw [];
+                        if (typeof data.p[3] != "number" || Number.isNaN(data.p[3]))
+                            throw [];
+                        if (typeof data.p[4] != "number" || typeof data.p[5] != "number" || Number.isNaN(data.p[4]) || Number.isNaN(data.p[5]))
+                            throw [];
+                        
+                        data.p = [
+                            fround(data.p[0]), fround(data.p[1]),
+                            fround(data.p[2]),
+                            fround(data.p[3]),
+                            fround(data.p[4]), fround(data.p[5])
+                        ];
+                        
+                        if (t.pos[0] != data.p[0] || t.pos[1] != data.p[1] || t.dir != data.p[2] || t.p_dir != data.p[3] || t.chg[0] != data.p[4] || t.chg[1] != data.p[5]) {
+                            t.pos = [data.p[0], data.p[1]];
+                            t.dir = data.p[2];
+                            t.p_dir = data.p[3];
+                            t.chg = [data.p[4], data.p[5]];
+                            
+                            if (t.hp > 0)
+                                tick_logs.push(["p", conn.id, data.p]);
                         }
-                    }));
-                    
-                    return;
+                        
+                        break;
+                    case "b":
+                        if (!conn.id || !tanks.some(t => t.id == conn.id && t.hp > 0))
+                            break;
+                        
+                        if (typeof data.b[0][0] != "number" || typeof data.b[0][1] != "number" || Number.isNaN(data.b[0][0]) || Number.isNaN(data.b[0][1]))
+                            throw [];
+                        if (typeof data.b[1][0] != "number" || typeof data.b[1][1] != "number" || Number.isNaN(data.b[1][0]) || Number.isNaN(data.b[1][1]))
+                            throw [];
+
+                        if (data.b[2]) {
+                            if (!tanks.some(t => t.id == data.b[2] && t.hp > 0))
+                                break;
+                            
+                            var dmg = 2.5 ** ((tanks.find(t => t.id == conn.id).stat.dmg * 3) / 100) * 10;
+                            var arm = 1 - 1 / 2.5 ** ((tanks.find(t => t.id == data.b[2]).stat.arm * 3) / 100);
+
+                            var hit = tanks.find(t => t.id == data.b[2]);
+                            
+                            hit.hp -= dmg * (1 - arm);
+                            
+                            tick_logs.push(["k", data.b[2], Math.max(hit.hp, 0)]);
+                            
+                            if (hit.hp <= 0) {
+                                try {
+                                    conns.find(c => c.id == data.b[2]).disconn(1002, "You were killed by " + conn.name);
+                                } catch (info) {
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        tick_logs.push(["b", conn.id, ...data.b]);
+                        
+                        break;
+                    case "c":
+                        if (!conn.name)
+                            break;
+                        
+                        if (typeof data.c != "string")
+                            throw [];
+                        
+                        if (data.c.length == 0)
+                            return;
+                        if (data.c.length > 1024)
+                            throw ["Maximum of 1024 chars for chat posts"];
+                        
+                        chat.push((conn.protocol == "watch" ? "{" + conn.name + "} " : "[" + conn.name + "] ") + data.c);
+                        
+                        tick_logs.push(["c", (conn.protocol == "watch" ? "{" + conn.name + "} " : "[" + conn.name + "] ") + data.c]);
+                        
+                        break;
                 }
-
-                if (data.id != conn.id || !tank_stats.some(t => t.id == data.id))
-                    throw data.id;
-
-                var hp = tanks.find(t => t.id == conn.id).hp;
-
-                tanks = tanks.filter(t => t.id != conn.id);
-
-                if (typeof data.pos[0] != "number" || typeof data.pos[1] != "number" || Number.isNaN(data.pos[0]) || Number.isNaN(data.pos[1]))
-                    throw data.pos;
-                if (typeof data.dir != "number" || Number.isNaN(data.dir))
-                    throw data.dir;
-                if (typeof data.p_dir != "number" || Number.isNaN(data.p_dir))
-                    throw data.p_dir;
-                if (typeof data.chg[0] != "number" || typeof data.chg[1] != "number" || typeof data.chg[2] != "number" || Number.isNaN(data.pos[0]) || Number.isNaN(data.pos[1]) || Number.isNaN(data.pos[2]))
-                    throw data.chg;
-                if (typeof data.ttr != "number" || !Number.isInteger(data.ttr) || data.ttr < 0)
-                    throw data.ttr;
-
-                tanks.push({
-                    id: data.id,
-                    pos: [data.pos[0], data.pos[1]],
-                    dir: data.dir,
-                    p_dir: data.p_dir,
-                    chg: [data.chg[0], data.chg[1], data.chg[2]],
-                    hp: hp,
-                    ttr: data.ttr,
-                    n: tank_stats.find(s => s.id == data.id).n
-                });
             } catch (info) {
-                conn.close();
+                conn.disconn(1002, ...(Array.isArray(info) ? info : []));
             }
         });
-
-        conn.on("close", () => {
+        
+        conn.on("disconn", () => {
+            if (tanks.some(t => t.id == conn.id))
+                tick_logs.push(["k", conn.id, 0]);
+            
             conns = conns.filter(c => c != conn);
-
-            if (conn.id) {
-                tank_stats = tank_stats.filter(t => t.id != conn.id);
-                tanks = tanks.filter(t => t.id != conn.id);
-            }
+            tanks = tanks.filter(t => t.id != conn.id);
         });
     });
-
+    
     setInterval(() => {
-        tanks = tanks.filter(t => t.hp > 0);
-
-        for (var conn of conns) {
-            try {
-                conn.send(JSON.stringify([
-                    tanks.filter(t => t.id != conn.id).map(t => [...t.pos.map(n => Math.round(n * 32768) / 32768), Math.round(t.dir * 32768) / 32768, Math.round(t.p_dir * 32768) / 32768, t.chg.map(n => Math.round(n * 32768) / 32768), Math.round(t.hp * 32768) / 32768, t.ttr, t.n, t.id, tank_stats.find(s => s.id == t.id).army]),
-                    trails.filter(t => t[0] >= conn.tick && t[2] != conn.id).map(t => t[1].map(p => p.map(n => Math.round(n * 32768) / 32768))),
-                    chat.filter(c => c[0] > conn.tick).map(c => c[1]),
-                    ...(conn.watching ? [] : [Math.round((tanks.find(t => t.id == conn.id) || { hp: 0 }).hp * 32768) / 32768])
-                ]));
-
-                if (conn.id && !tanks.some(t => t.id == conn.id))
-                    conn.close(1002, "You died!");
-            } catch (info) {
-                continue;
+        tick++;
+        
+        if (!(tick % 8)) {
+            if (!tick_logs.length)
+                return;
+            
+            for (var conn of conns) {
+                if (!conn.id2)
+                    continue;
+                
+                try {
+                    conn.data(tick_logs);
+                } catch (info) {
+                    continue;
+                }
             }
-
-            conn.tick = tick;
+            
+            tick_logs = [];
         }
-    }, 200);
+    }, 25);
     
     var io = require("readline").createInterface({
         input: process.stdin,
@@ -288,16 +290,15 @@
 
                     break;
                 case "tanks":
-                    console.log("ID         ID2      CONN                      NAME                              ARMY  POS                     HP    ");
+                    console.log("ID        ID2      CONN                      NAME                              ARMY    POS                     HP    ");
 
-                    var ts, t, c;
+                    var t, c;
 
-                    for (var tank of tank_stats) {
-                        ts = tank;
-                        t = tanks.find(t => t.id == ts.id);
-                        c = conns.find(c => c.id == ts.id);
-
-                        console.log(JSON.stringify(ts.id).slice(1, -1).padEnd(11) + JSON.stringify(c?.id2 || "").slice(1, -1).padEnd(9) + String(c?.conn_info || "").padEnd(24) + "  " + JSON.stringify(ts.n).slice(1, -1).replace(/\\"/g, "\"").padEnd(32) + "  " + ts.army.toString().padEnd(4) + "  " + (t && t.pos ? "[" + t.pos[0].toFixed(2) + ", " + t.pos[1].toFixed(2) + "]" : "").padEnd(22) + "  " + (t && t.hp ? t.hp.toFixed(2) : "").padEnd(6));
+                    for (var tank of tanks) {
+                        t = tank;
+                        c = conns.find(c => c.id == t.id);
+                        
+                        console.log(c.id + "  " + c.id2.padEnd(7) + "  " + String(c.conn_info || "").padEnd(24) + "  " + JSON.stringify(c.name).slice(1, -1).replace(/\\"/g, "\"").padEnd(32) + "  " + t.army.toString().padEnd(6) + "  " + ("[" + t.pos[0].toFixed(2) + ", " + t.pos[1].toFixed(2) + "]").padEnd(22) + "  " + t.hp.toFixed(2).padEnd(6));
                     }
                     
                     break;
@@ -327,86 +328,30 @@
                     
                     if (kick == "") {
                         for (var conn of conns) {
-                            console.log("Kicking " + conn.id);
+                            console.log("Kicking " + (conn.id || "?"));
 
-                            conn.close(1002, ...info);
+                            conn.disconn(1002, ...info);
                         }
                         
                         break;
                     }
                     
-                    if (kick == "*") {
-                        for (var conn of conns) {
-                            if (!conn.id || !conn.id2 || conn.id2.slice(-1) == "*") {
-                                console.log("Kicking " + (conn.id || "?") + " [" + (conn.id2 || "") + "]");
-
-                                conn.close(1002, ...info);
-                            }
-                        }
-                        
-                        break;
-                    }
-                    
-                    var by = {
-                        id: 0,
-                        id2: 0,
-                        conn: 0
-                    };
+                    var by = 3;
                     
                     for (var conn of conns) {
                         if (conn.id == kick)
-                            by.id = 1;
-                        if (conn.id2.slice(0, 6) == kick)
-                            by.id2 = 1;
+                            by = Math.min(by, 0);
+                        if (conn.id2 == kick)
+                            by = Math.min(by, 1);
                         if (conn.conn_info == kick)
-                            by.conn = 1;
+                            by = Math.min(by, 2);
                     }
-                    
-                    if (by.id) {
-                        for (var conn of conns) {
-                            if (conn.id == kick) {
-                                console.log("Kicking " + conn.id);
-                                
-                                conn.close(1002, ...info);
-                            }
-                        }
-                        
-                        break;
-                    }
-                    
-                    if (by.id2) {
-                        for (var conn of conns) {
-                            if (conn.id2 == kick) {
-                                console.log("Kicking " + conn.id + " [" + conn.id2 + "]");
-                                
-                                conn.close(1002, ...info);
-                            }
-                        }
-                        
-                        break;
-                    }
-                    
-                    if (by.conn) {
-                        for (var conn of conns) {
-                            if (conn.conn_info == kick) {
-                                console.log("Kicking " + conn.id + " [" + conn.conn_info + "]");
-                                
-                                conn.close(1002, ...info);
-                            }
-                        }
-                        
-                        break;
-                    }
-                    
-                    var ts;
                     
                     for (var conn of conns) {
-                        ts = tank_stats.find(s => s.id == conn.id);
-                        
-                        if (ts && ts.n == kick) {
-                            console.log("Kicking " + conn.id + " [" + ts.n + "]");
+                        if (conn[["id", "id2", "conn_info", "name"][by]] == kick) {
+                            console.log("Kicking " + (conn.id || "?") + (by ? " (" + (by == 3 ? JSON.stringify(conn.name).slice(1, -1).replace(/\\"/g, "\"") : conn[["id", "id2", "conn_info"][by]]) + ")": ""));
 
-                            conn.close(1002, ...info);
+                            conn.disconn(1002, ...info);
                         }
                     }
                     
@@ -438,12 +383,10 @@
                     var ts;
                     
                     for (var conn of conns) {
-                        ts = tank_stats.find(s => s.id == conn.id);
-                        
-                        if (ts && ts.n == kick) {
-                            console.log("Kicking " + conn.id + " [" + ts.n + "]");
+                        if (conn.name == kick) {
+                            console.log("Kicking " + (conn.id || "?") + " (" + JSON.stringify(conn.name).slice(1, -1).replace(/\\"/g, "\"") + ")");
 
-                            conn.close(1002, ...info);
+                            conn.disconn(1002, ...info);
                         }
                     }
                     
@@ -452,6 +395,8 @@
                     var info = run.slice(4);
                     
                     chat.push([tick, info]);
+                    
+                    tick_logs.push(["c", info]);
                     
                     break;
                 case "chat":
@@ -474,35 +419,38 @@
                         transcript = chat.slice(0, -count);
                     
                     if (transcript.length)
-                        console.log(transcript.map(t => t[1]).join("\n"));
+                        console.log(transcript.join("\n"));
                     
                     break;
                 case "watching":
                     console.log("ID2      CONN                      NAME                            ");
                     
-                    for (var conn of conns) {
-                        if (conn.watching) {
-                            console.log(conn.id2.padEnd(7) + "  " + String(conn.conn_info || "").padEnd(24) + "  " + JSON.stringify(conn.n).slice(1, -1).replace(/\\"/g, "\"").padEnd(32));
-                        }
-                    }
+                    for (var conn of conns)
+                        if (conn.id2 && conn.protocol == "watch")
+                            console.log(conn.id2.padEnd(7) + "  " + String(conn.conn_info || "").padEnd(24) + "  " + JSON.stringify(conn.name || "").slice(1, -1).replace(/\\"/g, "\"").padEnd(32));
+                    
+                    break;
+                case "conns":
+                    console.log("ID        ID2      CONN                      NAME                            ");
+                    
+                    for (var conn of conns)
+                        console.log((conn.id || "?").padEnd(8) + "  " + (conn.id2 || "").padEnd(7) + "  " + String(conn.conn_info || "").padEnd(24) + "  " + JSON.stringify(conn.name || "").slice(1, -1).replace(/\\"/g, "\"").padEnd(32));
+                    
+                    break;
                 case "stop":
                     var info = run.length > 4 ? [run.slice(5)] : [];
                     
                     for (var conn of conns) {
-                        console.log("Kicking " + conn.id);
+                        console.log("Kicking " + (conn.id || "?"));
 
-                        conn.close(1008, ...info);
+                        conn.disconn(1008, ...info);
                     }
+                    
+                    await ws.stop();
                     
                     io.close();
                     
-                    input = () => new Promise((r) => {});
-                    
-                    wss.close(() => {
-                        process.exit();
-                    });
-                    
-                    break;
+                    process.exit();
             }
         } catch (info) {
             console.log(info);

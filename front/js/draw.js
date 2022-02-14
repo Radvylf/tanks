@@ -8,11 +8,15 @@
     
     var px;
     
+    var wdims;
+    
     (window.onresize = () => {
         display.width = window.innerWidth;
         display.height = window.innerHeight;
         
         px = Math.sqrt(display.width * display.height) / 1000;
+        
+        wdims = [display.width / px, display.height / px];
     })();
     
     var scrolling = 1;
@@ -48,6 +52,8 @@
         c_2d.stroke();
     };
     
+    var invis_dist = Math.sqrt(400 + 144);
+    
     var font = 11;
     
     var draw = () => {
@@ -62,28 +68,59 @@
         c_2d.textBaseline = "bottom";
         c_2d.font = font + "px \"Atkinson Hyperlegible\", sans-serif";
         
-        for (var opp of Tanks.opps()) {
-            c_2d.strokeStyle = colors[opp[9]];
+        var pos = Tanks.pos();
+        var dir = Tanks.dir();
+        var p_dir = Tanks.p_dir();
+        
+        var atan2, bounds;
+        
+        for (var tank of Tanks.tanks()) {
+            c_2d.strokeStyle = colors[tank.army];
             
-            draw_box(...opp.slice(0, 2), 24, 40, opp[2]);
-            draw_box(...opp.slice(0, 2), 12, 12, opp[3]);
-            draw_box(opp[0] + Math.cos(opp[3]) * 16, opp[1] + Math.sin(opp[3]) * 16, 4, 20, opp[3]);
+            draw_box(...tank.pos, 24, 40, tank.dir);
+            draw_box(...tank.pos, 12, 12, tank.p_dir);
+            draw_box(tank.pos[0] + Math.cos(tank.p_dir) * 16, tank.pos[1] + Math.sin(tank.p_dir) * 16, 4, 20, tank.p_dir);
             
             c_2d.fillStyle = "rgba(136, 0, 0, 0.4)";
             c_2d.strokeStyle = "rgba(136, 0, 0, 0.4)";
             
-            c_2d.fillRect(...from_pos(opp[0] - 14, opp[1] - 14), (opp[5] / 100) * 28, 3);
-            c_2d.strokeRect(...from_pos(opp[0] - 14, opp[1] - 14), 28, 2);
+            c_2d.fillRect(...from_pos(tank.pos[0] - 14, tank.pos[1] - 14), (tank.hp / 100) * 28, 3);
+            c_2d.strokeRect(...from_pos(tank.pos[0] - 14, tank.pos[1] - 14), 28, 2);
             
             c_2d.fillStyle = "#000000";
             c_2d.strokeStyle = "#000000";
             
-            c_2d.fillText(opp[7], ...from_pos(opp[0], opp[1] - 18));
+            c_2d.fillText(tank.name, ...from_pos(tank.pos[0], tank.pos[1] - 18));
+            
+            if (((tank.pos[0] - pos[0]) + invis_dist < -(wdims[0] / 2) || (tank.pos[0] - pos[0]) - invis_dist > wdims[0] / 2) || ((tank.pos[1] - pos[1]) + invis_dist < -(wdims[1] / 2) || (tank.pos[1] - pos[1]) - invis_dist > wdims[1] / 2)) {
+                c_2d.strokeStyle = colors[tank.army];
+                
+                bounds = [
+                    tank.pos[0] < pos[0] ? [12, ((tank.pos[1] - pos[1]) / (pos[0] - tank.pos[0])) * (display.width / 2 - 12) + display.height / 2] : [display.width - 12, ((tank.pos[1] - pos[1]) / (tank.pos[0] - pos[0])) * (display.width / 2 - 12) + display.height / 2],
+                    tank.pos[1] < pos[1] ? [(display.height / 2 - 12) / ((tank.pos[1] - pos[1]) / (pos[0] - tank.pos[0])) + display.width / 2, 12] : [(display.height / 2 - 12) / ((tank.pos[1] - pos[1]) / (tank.pos[0] - pos[0])) + display.width / 2, display.height - 12]
+                ];
+                
+                if (pos[0] == tank.pos[0])
+                    bounds = [[display.width / 2, (wdims[1] - 12) * Math.sign(tank.pos[1] - pos[1])]];
+                if (pos[1] == tank.pos[1])
+                    bounds = [[(wdims[0] - 12) * Math.sign(tank.pos[0] - pos[0]), display.height / 2]];
+                
+                bounds = bounds.sort((b1, b2) => Math.sqrt((b1[0] - pos[0]) ** 2 + (b1[1] - pos[1]) ** 2) - Math.sqrt((b2[0] - pos[0]) ** 2 + (b2[1] - pos[1]) ** 2));
+                
+                atan2 = Math.atan2(tank.pos[1] - pos[1], tank.pos[0] - pos[0]);
+                
+                c_2d.beginPath();
+                c_2d.moveTo(bounds[0][0], bounds[0][1]);
+                c_2d.lineTo(bounds[0][0] + Math.cos(atan2 + Math.PI + Math.PI / 4) * 8, bounds[0][1] + Math.sin(atan2 + Math.PI + Math.PI / 4) * 8);
+                c_2d.moveTo(bounds[0][0], bounds[0][1]);
+                c_2d.lineTo(bounds[0][0] + Math.cos(atan2 + Math.PI - Math.PI / 4) * 8, bounds[0][1] + Math.sin(atan2 + Math.PI - Math.PI / 4) * 8);
+                
+                c_2d.stroke();
+            }
+            
+            c_2d.fillStyle = "#000000";
+            c_2d.strokeStyle = "#000000";
         }
-        
-        var pos = Tanks.pos();
-        var dir = Tanks.dir();
-        var p_dir = Tanks.p_dir();
         
         if (!Tanks.watching()) {
             c_2d.strokeStyle = colors[Tanks.army()];

@@ -12,7 +12,7 @@
     Tanks.colorblind = () => start_data.colorblind;
     Tanks.stat = () => JSON.parse(JSON.stringify(start_data.stats));
     
-    await Tanks.start_ws();
+    await Tanks.start_ws(start_data.watching);
     
     Tanks.start_inputs();
     
