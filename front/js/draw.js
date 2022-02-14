@@ -79,6 +79,31 @@
             c_2d.strokeStyle = "#000000";
             
             c_2d.fillText(opp[7], ...from_pos(opp[0], opp[1] - 18));
+
+            var bound = (value, max, min) => Math.min(Math.max(value, min), max);
+
+            var [oppx, oppy] = from_pos(...opp);
+            var [selfx, selfy] = from_pos(...Tanks.pos());
+
+            if(oppx < 0 || oppx > display.width || oppy < 0 || oppy > display.height){
+                var boundedx = bound(oppx, display.width - 15, 15), boundedy = bound(oppy, display.height - 15, 15);
+
+                c_2d.save();
+                c_2d.translate(boundedx, boundedy);
+                c_2d.rotate(Math.atan2(selfy - oppy, selfx - oppx));
+
+                c_2d.beginPath();
+                c_2d.moveTo(-10, 0);
+                c_2d.lineTo(10, -10);
+                c_2d.lineTo(0, 0);
+                c_2d.lineTo(10, 10);
+
+                c_2d.closePath()  
+                c_2d.strokeStyle = colors[opp[9]];      
+                c_2d.stroke();
+
+                c_2d.restore()
+            }
         }
         
         var pos = Tanks.pos();
