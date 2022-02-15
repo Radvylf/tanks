@@ -64,6 +64,9 @@
         for (var w of Tanks.walls())
             draw_box(...w);
         
+        for (var w of Tanks.windows())
+            draw_box(...w);
+        
         c_2d.textAlign = "center";
         c_2d.textBaseline = "bottom";
         c_2d.font = font + "px \"Atkinson Hyperlegible\", sans-serif";
@@ -109,6 +112,8 @@
                 
                 atan2 = Math.atan2(tank.pos[1] - pos[1], tank.pos[0] - pos[0]);
                 
+                c_2d.lineWidth = 2;
+                
                 c_2d.beginPath();
                 c_2d.moveTo(bounds[0][0], bounds[0][1]);
                 c_2d.lineTo(bounds[0][0] + Math.cos(atan2 + Math.PI + Math.PI / 4) * 8, bounds[0][1] + Math.sin(atan2 + Math.PI + Math.PI / 4) * 8);
@@ -116,6 +121,8 @@
                 c_2d.lineTo(bounds[0][0] + Math.cos(atan2 + Math.PI - Math.PI / 4) * 8, bounds[0][1] + Math.sin(atan2 + Math.PI - Math.PI / 4) * 8);
                 
                 c_2d.stroke();
+                
+                c_2d.lineWidth = 1;
             }
             
             c_2d.fillStyle = "#000000";

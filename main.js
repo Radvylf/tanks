@@ -5,14 +5,26 @@
     var tick_logs = [];
     
     var walls = [
-        [0, -250, 750, 15, Math.PI / 2],
-        [0, 250, 750, 15, Math.PI / 2],
-        [-225, 60, 15, 80, Math.PI / 2],
-        [-225, 0, 10, 40, Math.PI / 2],
-        [-225, -60, 15, 80, Math.PI / 2],
-        [225, 60, 15, 80, Math.PI / 2],
-        [225, 0, 10, 40, Math.PI / 2],
-        [225, -60, 15, 80, Math.PI / 2]
+        [0, -320, 1000, 15, Math.PI / 2],
+        [0, 320, 1000, 15, Math.PI / 2],
+        [-400, 60, 80, 12, 0],
+        [-400, -60, 80, 15, 0],
+        [400, 60, 80, 15, 0],
+        [400, -60, 80, 15, 0],
+        [0, 0, 240, 15, 0],
+        [200, 272.5, 80, 15, 0],
+        [200, -272.5, 80, 15, 0],
+        [-200, 272.5, 80, 15, 0],
+        [-200, -272.5, 80, 15, 0],
+        [600, 214.25, 227.5, 15, 0],
+        [600, -214.25, 227.5, 15, 0],
+        [-600, 214.25, 227.5, 15, 0],
+        [-600, -214.25, 227.5, 15, 0]
+    ];
+    
+    var windows = [
+        [-400, 0, 40, 10, 0],
+        [400, 0, 40, 10, 0]
     ];
 
     var chat = [];
@@ -62,6 +74,7 @@
                                     army: t.army
                                 })),
                                 walls: walls,
+                                windows: windows,
                                 chat: chat.slice(-100)
                             }]]);
                             
@@ -107,7 +120,7 @@
                             data.s.army = count[0] == count[1] ? (Math.random() * 2 | 0) : count[0] < count[1] ? 0 : 1;
                         }
 
-                        var pos = data.s.army == 0 ? [fround(-300 + (Math.random() * 75 - 37.5)), fround(Math.random() * 100 - 50)] : [fround(300 + (Math.random() * 75 - 37.5)), fround(Math.random() * 100 - 50)];
+                        var pos = data.s.army == 0 ? [fround(-425 - Math.random() * 75), fround(Math.random() * 100 - 50)] : [fround(425 + Math.random() * 75), fround(Math.random() * 100 - 50)];
 
                         tanks.push({
                             id: data.s.id,
@@ -146,6 +159,7 @@
                                 army: t.army
                             })),
                             walls: walls,
+                            windows: windows,
                             chat: chat.slice(-100)
                         }]]);
                         
@@ -251,6 +265,9 @@
     
     setInterval(() => {
         tick++;
+        
+        for (var tank of tanks)
+            tank.hp = Math.min(tank.hp + 1 / 40, 100);
         
         if (!(tick % 8)) {
             if (!tick_logs.length)

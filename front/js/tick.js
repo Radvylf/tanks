@@ -17,8 +17,11 @@
     var tanks = [];
     var trails = [];
     var walls = [];
+    var windows = [];
     
     var army;
+    
+    var tick_n = 0;
     
     var scroll_spd = 2;
     
@@ -170,6 +173,43 @@
         return ps.some(p => point_is_coll(p, x_2, y_2, sx_2 * 2, sy_2 * 2, d_2)) || ps_2.some(p => point_is_coll(p, x, y, sx * 2, sy * 2, d));
     };
     
+    var within_window = (px, py, d, x, y, sx, sy, d_2) => {
+        var p = [px, py];
+        
+        p[0] -= x;
+        p[1] -= y;
+
+        sx /= 2;
+        sy /= 2;
+
+        sx += 12;
+        sy += 20;
+
+        var r = Math.hypot(p[1], p[0]);
+        var t = Math.atan2(p[1], p[0]);
+
+        t -= d_2;
+        d -= d_2;
+
+        p[0] = Math.cos(t) * r;
+        p[1] = Math.sin(t) * r;
+
+        if ((p[0] < -sx || p[0] > sx) || (p[1] < -sy || p[1] > sy))
+            return 0;
+
+        d = (d % (Math.PI * 2) + (Math.PI * 2)) % (Math.PI * 2);
+
+        if (d > Math.PI)
+            d -= Math.PI * 2;
+        
+        d = Math.abs(d);
+
+        if (d > Math.PI / 12 && Math.PI - d > Math.PI / 12)
+            return 0;
+
+        return 1;
+    };
+    
     var try_shoot = () => {
         if (ttr)
             return;
@@ -180,6 +220,10 @@
         
         for (var wall of walls)
             coll = Math.min(coll, collision([pos[0] + Math.cos(p_dir) * 26, pos[1] + Math.sin(p_dir) * 26], p_dir, ...wall));
+        
+        for (var window of windows)
+            if (!within_window(pos[0] + Math.cos(p_dir) * 26, pos[1] + Math.sin(p_dir) * 26, p_dir, ...window))
+                coll = Math.min(coll, collision([pos[0] + Math.cos(p_dir) * 26, pos[1] + Math.sin(p_dir) * 26], p_dir, ...window));
         
         for (var tank of tanks) {
             c = collision([pos[0] + Math.cos(p_dir) * 26, pos[1] + Math.sin(p_dir) * 26], p_dir, ...tank.pos, 24, 40, tank.dir);
@@ -262,17 +306,19 @@
         if (!ttrm && (Tanks.c_down() || buttons["Space"] || buttons["o"] || buttons["x"]))
             try_shoot();
         
+        tick_n++;
+        
         (() => {
             var ds = [0, 0];
             
             chg[0] = 0;
             chg[1] = 0;
-
+            
             if (buttons["w"] || buttons["ArrowUp"])
                 ds = [1, 1];
-            if (buttons["a"] || buttons["ArrowLeft"] || (buttons["i"] || buttons["z"]) && p_dir - dir <= -(swp - Math.sqrt(swp) / 24 - (10 ** -10)))
+            if ((buttons["a"] || buttons["ArrowLeft"]) && !(Tanks.options.fancy_turning && ds[0] && tick_n % 3 < 1) || (buttons["i"] || buttons["z"]) && p_dir - dir <= -(swp - Math.sqrt(swp) / 24 - (10 ** -10)))
                 ds = [-1, 1];
-            if (buttons["d"] || buttons["ArrowRight"] || (buttons["p"] || buttons["c"]) && p_dir - dir >= (swp - Math.sqrt(swp) / 24 - (10 ** -10)))
+            if ((buttons["d"] || buttons["ArrowRight"]) && !(Tanks.options.fancy_turning && ds[0] && tick_n % 3 < 1) || (buttons["p"] || buttons["c"]) && p_dir - dir >= (swp - Math.sqrt(swp) / 24 - (10 ** -10)))
                 ds = [1, ds[0] == -1 ? 1 : -1];
             if (buttons["s"] || buttons["ArrowDown"])
                 ds = [-(ds[0] || 1), -(ds[1] || 1)];
@@ -285,6 +331,9 @@
 
                 for (var wall of walls)
                     coll = Math.min(coll, box_collision(...pos, 24, 40, dir + (ds[0] == -1 ? Math.PI : 0), ...wall));
+
+                for (var window of windows)
+                    coll = Math.min(coll, box_collision(...pos, 24, 40, dir + (ds[0] == -1 ? Math.PI : 0), ...window));
 
                 for (var tank of tanks)
                     if (tank.army != army)
@@ -306,6 +355,9 @@
             
             for (var wall of walls)
                 will_coll = will_coll || box_is_coll(...pos, 24, 40, dir + coll * ds[0], ...wall);
+            
+            for (var window of windows)
+                will_coll = will_coll || box_is_coll(...pos, 24, 40, dir + coll * ds[0], ...window);
             
             for (var tank of tanks)
                 if (tank.army != army)
@@ -335,6 +387,11 @@
             tank.pos[1] += Math.sin(tank.dir) * tank.chg[0];
             tank.dir += tank.chg[1];
         }
+        
+        hp = Math.min(hp + 1 / 40, 100);
+        
+        for (var tank of tanks)
+            tank.hp = Math.min(tank.hp + 1 / 40, 100);
     };
     
     Tanks.click_pos = (n_pos) => {
@@ -355,6 +412,7 @@
     Tanks.tanks = () => JSON.parse(JSON.stringify(tanks));
     Tanks.trails = () => JSON.parse(JSON.stringify(trails));
     Tanks.walls = () => JSON.parse(JSON.stringify(walls));
+    Tanks.windows = () => JSON.parse(JSON.stringify(windows));
     
     Tanks.army = () => army;
     
@@ -381,6 +439,7 @@
         
         tanks = data.tanks;
         walls = data.walls;
+        windows = data.windows;
         
         Tanks.push_chat(data.chat);
     
