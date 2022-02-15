@@ -1,16 +1,32 @@
 (async () => {
     var Tanks = window.Tanks;
     
+    Tanks.options = {
+        fancy_turning: 0,
+        turn_with_turret: 0,
+        no_opposite_turret: 0
+    };
+    
+    Tanks.push_options = () => {
+        try {
+            window.localStorage.setItem("options", JSON.stringify(Tanks.options));
+            
+            return 1;
+        } catch (info) {
+            return 0;
+        }
+    };
+    
     try {
-        Tanks.options = JSON.parse(window.localStorage.getItem("options"));
-        
-        if (!Tanks.options)
+        var options = JSON.parse(window.localStorage.getItem("options"));
+
+        if (!options)
             throw [];
+
+        for (var x in options)
+            Tanks.options[x] = options[x];
     } catch (info) {
-        Tanks.options = {
-            fancy_turning: 0,
-            turn_with_turret: 0
-        };
+        info;
     }
     
     var id = [...Array(8)].map(_ => "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"[Math.random() * 64 | 0]).join("");

@@ -25,6 +25,17 @@
                 if (info.ctrlKey || info.altKey || info.metaKey)
                     return;
                 
+                if (info.code == "Escape" && !info.shiftKey) {
+                    doc.modal_cont.style.display = "";
+                    
+                    prompting = 0;
+                    doc.input.onkeydown = null;
+                    
+                    doc.input.value = "";
+                    
+                    r();
+                }
+                
                 if (info.code == "Enter" && !info.shiftKey) {
                     doc.modal_cont.style.display = "";
                     

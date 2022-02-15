@@ -286,7 +286,7 @@
         if (p_off < -Math.PI)
             p_off += Math.PI * 2;
 
-        if ((p_off < -(Math.PI - swp) || p_off > (Math.PI - swp))) {
+        if (!Tanks.options.no_opposite_turret && (p_off < -(Math.PI - swp) || p_off > (Math.PI - swp))) {
             p_off = (p_off + Math.PI) % (Math.PI * 2);
 
             if (p_off > Math.PI)
@@ -367,6 +367,9 @@
                 dir = ((dir + coll * ds[0]) % (Math.PI * 2) + (Math.PI * 2)) % (Math.PI * 2);
                 
                 chg[1] = coll * ds[0];
+                
+                if (Tanks.options.turn_with_turret)
+                    p_dir += coll * ds[0];
             }
         })();
         
@@ -445,7 +448,7 @@
     
         if (!Tanks.watching()) {
             arm = 1 - 1 / 2.5 ** ((Tanks.stat().arm * 3) / 100);
-            spd = 2 ** (Tanks.stat().spd / (100 / 3) - 2);
+            spd = 2 ** (Tanks.stat().spd / (100 / 3) - 1);
             swp = Math.PI / (2 ** (Tanks.stat().spd / 50 + 1));
             dmg = 2.5 ** ((Tanks.stat().dmg * 3) / 100) * 10;
             rld = 2.5 ** (((100 - Tanks.stat().rld) * 3) / 100) / 6.25/* / (625 / (stat_rld + 625))*/;

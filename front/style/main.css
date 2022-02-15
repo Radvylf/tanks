@@ -85,7 +85,8 @@ canvas {
 }
 
 #start_modal p {
-    font-size: 12px;
+    font-size: 11px;
+    line-height: 1.25;
     
     margin: 0;
 }
@@ -136,12 +137,12 @@ div.box_cont {
 div.box_cont input {
     margin: 0;
     margin-right: 4px;
-    height: 16px;
+    height: calc(11px * 1.25);
     display: block;
 }
 
 div.box_cont label {
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.25;
     display: block;
 }
@@ -150,7 +151,7 @@ div.button_cont {
     display: flex;
 }
 
-#start_modal button {
+#start_modal button:not(.room) {
     padding: 6px;
     border: 1px solid #444;
     outline: 1px solid #444;
@@ -165,6 +166,8 @@ div.button_cont {
     width: 100%;
     
     font-weight: bold;
+    
+    margin-bottom: 12px;
 }
 
 #start_modal button:disabled {
@@ -174,7 +177,7 @@ div.button_cont {
 }
 
 #start_modal p.or {
-    margin: 12px 0;
+    margin: 0 0 12px 0;
     
     text-align: center;
     font-weight: bold;
@@ -190,4 +193,35 @@ div.button_cont {
     border-color: #208020;
     outline-color: #208020;
     color: #206020;
+}
+
+div.room_cont {
+    margin-bottom: 12px;
+    
+    display: flex;
+    justify-content: center;
+}
+
+#start_modal button.room {
+    font-size: 11px;
+    line-height: 1.25;
+    
+    padding: 0;
+    
+    background-color: inherit;
+    
+    cursor: pointer;
+    
+    border: none;
+}
+
+#start_modal .room_cont p {
+    margin: 0;
+    
+    padding: 0 12px;
+}
+
+button.bold {
+    font-weight: bold;
+    text-decoration: underline;
 }

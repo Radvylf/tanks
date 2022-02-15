@@ -1,8 +1,7 @@
 (async () => {
-    var tanks = [];
+    var rooms = [];
     
     var tick = 0;
-    var tick_logs = [];
     
     var walls = [
         [0, -320, 1000, 15, Math.PI / 2],
@@ -26,9 +25,9 @@
         [-400, 0, 40, 10, 0],
         [400, 0, 40, 10, 0]
     ];
-
-    var chat = [];
     
+    var main_transcript = [];
+
     var Conn = require("./src/conn");
     var ws = require("./src/ws")(Conn);
     
@@ -58,12 +57,23 @@
                             
                             if (typeof data.s.name != "string" || data.s.name.length < 2 || data.s.name.length > 28)
                                 throw ["Name must be 2 to 28 characters"];
+                            
+                            if (typeof data.s.room != "number" || !Number.isInteger(data.s.room) || data.s.room < 0 || data.s.room > 0xffff)
+                                throw [];
 
                             conn.id2 = data.s.id2;
                             conn.name = data.s.name;
+                            conn.room = data.s.room;
 
+                            if (!rooms[conn.room])
+                                rooms[conn.room] = {
+                                    tanks: [],
+                                    tick_logs: [],
+                                    chat: []
+                                };
+                            
                             conn.data([["sy", {
-                                tanks: tanks.filter(t => t.id != conn.id).map(t => ({
+                                tanks: rooms[conn.room].tanks.filter(t => t.id != conn.id).map(t => ({
                                     id: t.id,
                                     name: t.name,
                                     pos: t.pos,
@@ -75,7 +85,7 @@
                                 })),
                                 walls: walls,
                                 windows: windows,
-                                chat: chat.slice(-100)
+                                chat: rooms[conn.room].chat.slice(-100)
                             }]]);
                             
                             break;
@@ -84,7 +94,7 @@
                         if ("id" in conn)
                             throw [];
                         
-                        if (data.s.id.length != 8 || data.s.id.match(/[^A-Za-z0-9\-_]/) || tanks.some(t => t.id == data.s.id))
+                        if (data.s.id.length != 8 || data.s.id.match(/[^A-Za-z0-9\-_]/) || rooms.some(r => r.tanks.some(t => t.id == data.s.id)))
                             throw [];
                         if (!data.s.id2.match(/^[A-Za-z0-9\-_]{6}\*?$/) || data.s.id2.slice(-1) == "*" && conns.some(c => c.id2 == data.s.id2))
                             throw [];
@@ -106,15 +116,26 @@
                         
                         if ("army" in data.s && data.s.army != null && (typeof data.s.army != "number" || data.s.army != 0 && data.s.army != 1))
                             throw [];
+                            
+                        if (typeof data.s.room != "number" || !Number.isInteger(data.s.room) || data.s.room < 0 || data.s.room > 0xffff)
+                            throw [];
 
                         conn.id = data.s.id;
                         conn.id2 = data.s.id2;
                         conn.name = data.s.name;
+                        conn.room = data.s.room;
+
+                        if (!rooms[conn.room])
+                            rooms[conn.room] = {
+                                tanks: [],
+                                tick_logs: [],
+                                chat: []
+                            };
 
                         if (!("army" in data.s) || data.s.army == null) {
                             var count = [0, 0];
 
-                            for (var tank of tanks)
+                            for (var tank of rooms[conn.room].tanks)
                                 count[tank.army]++;
 
                             data.s.army = count[0] == count[1] ? (Math.random() * 2 | 0) : count[0] < count[1] ? 0 : 1;
@@ -122,7 +143,7 @@
 
                         var pos = data.s.army == 0 ? [fround(-425 - Math.random() * 75), fround(Math.random() * 100 - 50)] : [fround(425 + Math.random() * 75), fround(Math.random() * 100 - 50)];
 
-                        tanks.push({
+                        rooms[conn.room].tanks.push({
                             id: data.s.id,
                             stat: data.s.stat,
                             name: data.s.name,
@@ -134,7 +155,7 @@
                             army: data.s.army
                         });
                         
-                        tick_logs.push(["s", {
+                        rooms[conn.room].tick_logs.push(["s", {
                             id: data.s.id,
                             name: data.s.name,
                             pos: pos,
@@ -148,7 +169,7 @@
                         conn.data([["sy", {
                             pos: pos,
                             army: data.s.army,
-                            tanks: tanks.filter(t => t.id != conn.id).map(t => ({
+                            tanks: rooms[conn.room].tanks.filter(t => t.id != conn.id).map(t => ({
                                 id: t.id,
                                 name: t.name,
                                 pos: t.pos,
@@ -160,15 +181,15 @@
                             })),
                             walls: walls,
                             windows: windows,
-                            chat: chat.slice(-100)
+                            chat: rooms[conn.room].chat.slice(-100)
                         }]]);
                         
                         break;
                     case "p":
-                        if (!conn.id || !tanks.some(t => t.id == conn.id && t.hp > 0))
+                        if (!conn.id || !rooms[conn.room].tanks.some(t => t.id == conn.id && t.hp > 0))
                             break;
                         
-                        var t = tanks.find(t => t.id == conn.id);
+                        var t = rooms[conn.room].tanks.find(t => t.id == conn.id);
                         
                         if (typeof data.p[0] != "number" || typeof data.p[1] != "number" || Number.isNaN(data.p[0]) || Number.isNaN(data.p[1]))
                             throw [];
@@ -193,12 +214,12 @@
                             t.chg = [data.p[4], data.p[5]];
                             
                             if (t.hp > 0)
-                                tick_logs.push(["p", conn.id, data.p]);
+                                rooms[conn.room].tick_logs.push(["p", conn.id, data.p]);
                         }
                         
                         break;
                     case "b":
-                        if (!conn.id || !tanks.some(t => t.id == conn.id && t.hp > 0))
+                        if (!conn.id || !rooms[conn.room].tanks.some(t => t.id == conn.id && t.hp > 0))
                             break;
                         
                         if (typeof data.b[0][0] != "number" || typeof data.b[0][1] != "number" || Number.isNaN(data.b[0][0]) || Number.isNaN(data.b[0][1]))
@@ -207,17 +228,17 @@
                             throw [];
 
                         if (data.b[2]) {
-                            if (!tanks.some(t => t.id == data.b[2] && t.hp > 0))
+                            if (!rooms[conn.room].tanks.some(t => t.id == data.b[2] && t.hp > 0))
                                 break;
                             
-                            var dmg = 2.5 ** ((tanks.find(t => t.id == conn.id).stat.dmg * 3) / 100) * 10;
-                            var arm = 1 - 1 / 2.5 ** ((tanks.find(t => t.id == data.b[2]).stat.arm * 3) / 100);
+                            var dmg = 2.5 ** ((rooms[conn.room].tanks.find(t => t.id == conn.id).stat.dmg * 3) / 100) * 10;
+                            var arm = 1 - 1 / 2.5 ** ((rooms[conn.room].tanks.find(t => t.id == data.b[2]).stat.arm * 3) / 100);
 
-                            var hit = tanks.find(t => t.id == data.b[2]);
+                            var hit = rooms[conn.room].tanks.find(t => t.id == data.b[2]);
                             
                             hit.hp -= dmg * (1 - arm);
                             
-                            tick_logs.push(["k", data.b[2], Math.max(hit.hp, 0)]);
+                            rooms[conn.room].tick_logs.push(["k", data.b[2], Math.max(hit.hp, 0)]);
                             
                             if (hit.hp <= 0) {
                                 try {
@@ -228,7 +249,7 @@
                             }
                         }
                         
-                        tick_logs.push(["b", conn.id, ...data.b]);
+                        rooms[conn.room].tick_logs.push(["b", conn.id, ...data.b]);
                         
                         break;
                     case "c":
@@ -243,9 +264,12 @@
                         if (data.c.length > 1024)
                             throw ["Maximum of 1024 chars for chat posts"];
                         
-                        chat.push((conn.protocol == "watch" ? "{" + conn.name + "} " : "[" + conn.name + "] ") + data.c);
+                        data.c = (conn.protocol == "watch" ? "{" + conn.name + "} " : "[" + conn.name + "] ") + data.c;
                         
-                        tick_logs.push(["c", (conn.protocol == "watch" ? "{" + conn.name + "} " : "[" + conn.name + "] ") + data.c]);
+                        rooms[conn.room].chat.push(data.c);
+                        rooms[conn.room].tick_logs.push(["c", data.c]);
+                        
+                        main_transcript.push([Date.now(), data.c]);
                         
                         break;
                 }
@@ -255,36 +279,43 @@
         });
         
         conn.on("disconn", () => {
-            if (tanks.some(t => t.id == conn.id))
-                tick_logs.push(["k", conn.id, 0]);
-            
             conns = conns.filter(c => c != conn);
-            tanks = tanks.filter(t => t.id != conn.id);
+            
+            if (conn.id) {
+                rooms[conn.room].tick_logs.push(["k", conn.id, 0]);
+                
+                rooms[conn.room].tanks = rooms[conn.room].tanks.filter(t => t.id != conn.id);
+            }
         });
     });
     
     setInterval(() => {
         tick++;
         
-        for (var tank of tanks)
-            tank.hp = Math.min(tank.hp + 1 / 40, 100);
-        
-        if (!(tick % 8)) {
-            if (!tick_logs.length)
-                return;
+        for (var room of rooms) {
+            if (!room)
+                continue;
             
-            for (var conn of conns) {
-                if (!conn.id2)
-                    continue;
-                
-                try {
-                    conn.data(tick_logs);
-                } catch (info) {
-                    continue;
+            for (var tank of room.tanks)
+                tank.hp = Math.min(tank.hp + 1 / 40, 100);
+            
+            if (!(tick % 8)) {
+                if (!room.tick_logs.length)
+                    return;
+
+                for (var conn of conns) {
+                    if (!conn.id2 || rooms[conn.room] != room)
+                        continue;
+
+                    try {
+                        conn.data(room.tick_logs);
+                    } catch (info) {
+                        continue;
+                    }
                 }
+
+                room.tick_logs = [];
             }
-            
-            tick_logs = [];
         }
     }, 25);
     
@@ -307,15 +338,20 @@
 
                     break;
                 case "tanks":
-                    console.log("ID        ID2      CONN                      NAME                              ARMY    POS                     HP    ");
+                    console.log("ID        ID2      CONN                      ROOM    NAME                              ARMY    POS                     HP    ");
 
                     var t, c;
 
-                    for (var tank of tanks) {
-                        t = tank;
-                        c = conns.find(c => c.id == t.id);
+                    for (var room of rooms) {
+                        if (!room)
+                            continue;
                         
-                        console.log(c.id + "  " + c.id2.padEnd(7) + "  " + String(c.conn_info || "").padEnd(24) + "  " + JSON.stringify(c.name).slice(1, -1).replace(/\\"/g, "\"").padEnd(32) + "  " + t.army.toString().padEnd(6) + "  " + ("[" + t.pos[0].toFixed(2) + ", " + t.pos[1].toFixed(2) + "]").padEnd(22) + "  " + t.hp.toFixed(2).padEnd(6));
+                        for (var tank of room.tanks) {
+                            t = tank;
+                            c = conns.find(c => c.id == t.id);
+
+                            console.log(c.id + "  " + c.id2.padEnd(7) + "  " + String(c.conn_info || "").padEnd(24) + "  " + c.room.toString().padEnd(6) + "  " + JSON.stringify(c.name).slice(1, -1).replace(/\\"/g, "\"").padEnd(32) + "  " + t.army.toString().padEnd(6) + "  " + ("[" + t.pos[0].toFixed(2) + ", " + t.pos[1].toFixed(2) + "]").padEnd(22) + "  " + t.hp.toFixed(2).padEnd(6));
+                        }
                     }
                     
                     break;
@@ -409,49 +445,69 @@
                     
                     break;
                 case "say":
+                    var say_rooms = rooms;
                     var info = run.slice(4);
                     
-                    chat.push([tick, info]);
+                    if (info.startsWith("in")) {
+                        say_rooms = info.slice(3).match(/\d+/)[0];
+                        
+                        info = info.slice(say_rooms.length + 4);
+                        say_rooms = [rooms[room]];
+                    }
                     
-                    tick_logs.push(["c", info]);
+                    for (var room of say_rooms) {
+                        room.chat.push([tick, info]);
+
+                        room.tick_logs.push(["c", info]);
+                    }
                     
                     break;
                 case "chat":
                     var count = run.slice(5);
                     
                     if (!count)
-                        count = String(chat.length);
+                        count = String(main_transcript.length);
                     
                     count = Number(count);
                     
                     if (Number.isNaN(count) || !Number.isInteger(count))
                         break;
                     
-                    if (count < -chat.length || count > chat.length)
-                        count = chat.length;
+                    if (count < -main_transcript.length || count > main_transcript.length)
+                        count = main_transcript.length;
                     
-                    var transcript = chat.slice(chat.length - count);
+                    var transcript = main_transcript.slice(main_transcript.length - count);
                     
                     if (count < 0)
-                        transcript = chat.slice(0, -count);
+                        transcript = main_transcript.slice(0, -count);
+                    
+                    var format = (now) => {
+                        now = Date.now() - now;
+                        
+                        var s = now / 1000 | 0;
+                        var m = now / 60000 | 0;
+                        var b = now / 3600000 | 0;
+                        
+                        return "-" + b.toString().padStart(2, "0") + ":" + (m % 60).toString().padStart(2, "0") + ":" + (s % 60).toString().padStart(2, "0");
+                    };
                     
                     if (transcript.length)
-                        console.log(transcript.join("\n"));
+                        console.log(transcript.map(t => format(t[0]) + " " + t[1]).join("\n"));
                     
                     break;
                 case "watching":
-                    console.log("ID2      CONN                      NAME                            ");
+                    console.log("ID2      CONN                      ROOM    NAME                            ");
                     
                     for (var conn of conns)
                         if (conn.id2 && conn.protocol == "watch")
-                            console.log(conn.id2.padEnd(7) + "  " + String(conn.conn_info || "").padEnd(24) + "  " + JSON.stringify(conn.name || "").slice(1, -1).replace(/\\"/g, "\"").padEnd(32));
+                            console.log(conn.id2.padEnd(7) + "  " + String(conn.conn_info || "").padEnd(24) + "  " + c.room.toString().padEnd(6) + "  " + JSON.stringify(conn.name || "").slice(1, -1).replace(/\\"/g, "\"").padEnd(32));
                     
                     break;
                 case "conns":
-                    console.log("ID        ID2      CONN                      NAME                            ");
+                    console.log("ID        ID2      CONN                      ROOM    NAME                            ");
                     
                     for (var conn of conns)
-                        console.log((conn.id || "?").padEnd(8) + "  " + (conn.id2 || "").padEnd(7) + "  " + String(conn.conn_info || "").padEnd(24) + "  " + JSON.stringify(conn.name || "").slice(1, -1).replace(/\\"/g, "\"").padEnd(32));
+                        console.log((conn.id || "?").padEnd(8) + "  " + (conn.id2 || "").padEnd(7) + "  " + String(conn.conn_info || "").padEnd(24) + "  " + (c.room || "").toString().padEnd(6) + "  " + JSON.stringify(conn.name || "").slice(1, -1).replace(/\\"/g, "\"").padEnd(32));
                     
                     break;
                 case "stop":

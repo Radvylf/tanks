@@ -1,6 +1,8 @@
 (() => {
     var Tanks = window.Tanks;
     
+    var room = +(window.location.search.match(/\broom=\d+\b/) || ["room=0"])[0].match(/\d+/)[0];
+    
     var id2;
     
     try {
@@ -32,7 +34,8 @@
                     t: "s",
                     s: {
                         id2: id2,
-                        name: Tanks.name()
+                        name: Tanks.name(),
+                        room: room
                     }
                 }));
 
@@ -45,7 +48,8 @@
                     id: Tanks.id(),
                     id2: id2,
                     stat: Tanks.stat(),
-                    name: Tanks.name()
+                    name: Tanks.name(),
+                    room: room
                 }
             }));
         };
