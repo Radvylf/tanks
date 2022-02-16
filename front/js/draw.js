@@ -67,8 +67,6 @@
         for (var w of Tanks.windows())
             draw_box(...w);
         
-        c_2d.textAlign = "center";
-        c_2d.textBaseline = "bottom";
         c_2d.font = font + "px \"Atkinson Hyperlegible\", sans-serif";
         
         var pos = Tanks.pos();
@@ -92,6 +90,9 @@
             
             c_2d.fillStyle = "#000000";
             c_2d.strokeStyle = "#000000";
+            
+            c_2d.textAlign = "center";
+            c_2d.textBaseline = "bottom";
             
             c_2d.fillText(tank.name, ...from_pos(tank.pos[0], tank.pos[1] - 18));
             
@@ -121,12 +122,17 @@
                 c_2d.lineTo(bounds[0][0] + Math.cos(atan2 + Math.PI - Math.PI / 4) * 8, bounds[0][1] + Math.sin(atan2 + Math.PI - Math.PI / 4) * 8);
                 
                 c_2d.stroke();
+            
+                c_2d.fillStyle = "#000000";
+                c_2d.strokeStyle = "#000000";
                 
                 c_2d.lineWidth = 1;
-            }
             
-            c_2d.fillStyle = "#000000";
-            c_2d.strokeStyle = "#000000";
+                c_2d.textAlign = bounds[0][0] < display.width / 3 ? "left" : bounds[0][0] < display.width * 2 / 3 ? "center" : "right";
+                c_2d.textBaseline = bounds[0][1] < display.height / 3 ? "top" : bounds[0][1] < display.height * 2 / 3 ? "middle" : "bottom";
+                
+                c_2d.fillText(tank.name, bounds[0][0] + Math.cos(atan2 + Math.PI) * 12, bounds[0][1] + Math.sin(atan2 + Math.PI) * 12);
+            }
         }
         
         if (!Tanks.watching()) {

@@ -149,7 +149,7 @@
                             data.s.army = count[0] == count[1] ? (Math.random() * 2 | 0) : count[0] < count[1] ? 0 : 1;
                         }
 
-                        var pos = data.s.army == 0 ? [fround(-425 - Math.random() * 75), fround(Math.random() * 100 - 50)] : [fround(425 + Math.random() * 75), fround(Math.random() * 100 - 50)];
+                        var pos = data.s.army == 0 ? [fround(-437.5 - Math.random() * 75), fround(Math.random() * 100 - 50)] : [fround(437.5 + Math.random() * 75), fround(Math.random() * 100 - 50)];
 
                         rooms[conn.room].tanks.push({
                             id: data.s.id,
