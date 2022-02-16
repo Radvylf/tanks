@@ -309,7 +309,7 @@
             
             if (!(tick % 8)) {
                 if (!room.tick_logs.length)
-                    return;
+                    continue;
 
                 for (var conn of conns) {
                     if (!conn.id2 || rooms[conn.room] != room)

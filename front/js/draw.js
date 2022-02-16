@@ -59,6 +59,8 @@
     var draw = () => {
         c_2d.clearRect(0, 0, display.width, display.height);
         
+        c_2d.lineWidth = 2;
+            
         var colors = Tanks.colorblind() ? ["#006ddb", "#920000"] : ["#208020", "#604020"];
         
         for (var w of Tanks.walls())
@@ -126,7 +128,7 @@
                 c_2d.fillStyle = "#000000";
                 c_2d.strokeStyle = "#000000";
                 
-                c_2d.lineWidth = 1;
+                // c_2d.lineWidth = 1;
             
                 c_2d.textAlign = bounds[0][0] < display.width / 3 ? "left" : bounds[0][0] < display.width * 2 / 3 ? "center" : "right";
                 c_2d.textBaseline = bounds[0][1] < display.height / 3 ? "top" : bounds[0][1] < display.height * 2 / 3 ? "middle" : "bottom";

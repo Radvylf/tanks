@@ -211,6 +211,9 @@
     };
     
     var try_shoot = () => {
+        if (Tanks.watching())
+            return;
+        
         if (ttr)
             return;
         

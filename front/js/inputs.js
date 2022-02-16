@@ -55,7 +55,7 @@
                 }
             }
 
-            if (Tanks.watching() && id == "k")
+            if (Tanks.watching() && !Tanks.prompting() && id == "k")
                 Tanks.click_pos([0, 0]);
 
             if (id in buttons)
