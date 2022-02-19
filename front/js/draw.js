@@ -199,8 +199,15 @@
         c_2d.textAlign = "left";
         c_2d.textBaseline = "top";
 
-        for (var i = 0; i < Tanks.chat().length; i++)
-            c_2d.fillText(Tanks.chat()[i], 12, 12 + i * (font * 1.25 | 0));
+        var chat = Tanks.chat();
+        
+        for (var i = 0; i < chat.length; i++) {
+            c_2d.fillStyle = ["#000000", ...colors][chat[i][1] + 1];
+            
+            c_2d.fillText(chat[i][2], 12, 12 + i * (font * 1.25 | 0));
+        }
+        
+        c_2d.fillStyle = "#000000";
         
         if (Tanks.watching()) {
             c_2d.textBaseline = "bottom";

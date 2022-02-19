@@ -58,6 +58,9 @@
             data = JSON.parse(data.data.toString());
             
             for (var d of data) {
+                if (d[0] != "p")
+                    console.log(d);
+                
                 switch (d[0]) {
                     case "sy":
                         Tanks.start_incoming(d[1]);
@@ -82,7 +85,7 @@
                         
                         break;
                     case "c":
-                        Tanks.push_chat([d[1]]);
+                        Tanks.push_chat([d.slice(1)]);
                         
                         break;
                 }

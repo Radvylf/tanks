@@ -189,7 +189,7 @@
                             })),
                             walls: walls,
                             windows: windows,
-                            chat: rooms[conn.room].chat.slice(-100)
+                            chat: rooms[conn.room].chat.filter(c => c[1] == -1 || c[1] == data.s.army).slice(-100)
                         }]]);
                         
                         break;
@@ -264,20 +264,23 @@
                         if (!conn.name)
                             break;
                         
-                        if (typeof data.c != "string")
+                        if (typeof data.c.d != "string")
                             throw [];
                         
-                        if (data.c.length == 0)
+                        if (data.c.d.length == 0)
                             return;
-                        if (data.c.length > 1024)
+                        if (data.c.d.length > 1024)
                             throw ["Maximum of 1024 chars for chat posts"];
                         
-                        data.c = (conn.protocol == "watch" ? "{" + conn.name + "} " : "[" + conn.name + "] ") + data.c;
+                        data.c.d = (conn.protocol == "watch" ? "{" + conn.name + "} " : "[" + conn.name + "] ") + data.c.d;
                         
-                        rooms[conn.room].chat.push(data.c);
-                        rooms[conn.room].tick_logs.push(["c", data.c]);
+                        var now = Date.now();
+                        var army = conn.protocol != "watch" && data.c.p ? rooms[conn.room].tanks.find(t => t.id == conn.id).army : -1;
                         
-                        main_transcript.push([Date.now(), data.c]);
+                        rooms[conn.room].chat.push([now, army, data.c.d]);
+                        rooms[conn.room].tick_logs.push(["c", now, army, data.c.d]);
+                        
+                        main_transcript.push([[conn.room], now, army, data.c.d]);
                         
                         break;
                 }
@@ -316,7 +319,7 @@
                         continue;
 
                     try {
-                        conn.data(room.tick_logs);
+                        conn.data(room.tick_logs.filter(t => conn.protocol == "watch" || t[0] != "c" || t[2] == -1 || t[2] == room.tanks.find(t => t.id == conn.id).army));
                     } catch (info) {
                         continue;
                     }
@@ -453,21 +456,24 @@
                     
                     break;
                 case "say":
-                    var say_rooms = rooms;
+                    var say_rooms = [...rooms.keys()].filter(r => rooms[r]);
                     var info = run.slice(4);
                     
-                    if (info.startsWith("in")) {
-                        say_rooms = info.slice(3).match(/\d+/)[0];
+                    if (info.startsWith("to")) {
+                        say_rooms = info.slice(3).match(/\d+|\[\d+(,\s*\d+)*\]/)[0];
                         
                         info = info.slice(say_rooms.length + 4);
-                        say_rooms = [rooms[room]];
+                        say_rooms = say_rooms[0] == "[" ? JSON.parse(say_rooms) : [+say_rooms];
                     }
                     
+                    var now = Date.now();
+                    
                     for (var room of say_rooms) {
-                        room.chat.push([tick, info]);
-
-                        room.tick_logs.push(["c", info]);
+                        rooms[room].chat.push([now, -1, info]);
+                        rooms[room].tick_logs.push(["c", now, -1, info]);
                     }
+                    
+                    main_transcript.push([say_rooms, now, -1, info]);
                     
                     break;
                 case "chat":
@@ -499,8 +505,10 @@
                         return "-" + b.toString().padStart(2, "0") + ":" + (m % 60).toString().padStart(2, "0") + ":" + (s % 60).toString().padStart(2, "0");
                     };
                     
+                    console.log("ROOMS           TIMING        ARMY    POST");
+                    
                     if (transcript.length)
-                        console.log(transcript.map(t => format(t[0]) + " " + t[1]).join("\n"));
+                        console.log(transcript.map(t => (t[0][0] + (t[0].length > 1 ? " (+" + (t[0].length - 1) + ")" : "")).padEnd(14) + "  " + format(t[1]).padEnd(12) + "  " + t[2].toString().padEnd(6) + "  " + t[3]).join("\n"));
                     
                     break;
                 case "watching":

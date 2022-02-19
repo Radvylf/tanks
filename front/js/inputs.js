@@ -42,14 +42,33 @@
         window.onkeyup = async (info) => {
             var id = info.code.startsWith("Key") ? info.code.slice(3).toLowerCase() : info.code;
 
-            if (id == "t") {
-                if (!Tanks.prompting() && Tanks.ws_on()) {
+            if (id == "r") {
+                if (!Tanks.watching() && !Tanks.prompting() && Tanks.ws_on()) {
                     var chat_input = await Tanks.prompt_for_input("Chat:");
 
                     if (chat_input && Tanks.ws_on()) {
                         Tanks.ws({
                             t: "c",
-                            c: chat_input
+                            c: {
+                                p: 1,
+                                d: chat_input
+                            }
+                        });
+                    }
+                }
+            }
+
+            if (id == "t") {
+                if (!Tanks.prompting() && Tanks.ws_on()) {
+                    var chat_input = await Tanks.prompt_for_input("Public chat:");
+
+                    if (chat_input && Tanks.ws_on()) {
+                        Tanks.ws({
+                            t: "c",
+                            c: {
+                                p: 0,
+                                d: chat_input
+                            }
                         });
                     }
                 }
