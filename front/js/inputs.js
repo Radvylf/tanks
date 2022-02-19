@@ -44,7 +44,7 @@
 
             if (id == "t") {
                 if (!Tanks.prompting() && Tanks.ws_on()) {
-                    var chat_input = await Tanks.prompt_for_input("Chat:");
+                    var chat_input = await Tanks.prompt_for_input("Chat: (prepend an ! for team chat)");
 
                     if (chat_input && Tanks.ws_on()) {
                         Tanks.ws({

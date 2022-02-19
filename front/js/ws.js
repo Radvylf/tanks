@@ -20,10 +20,11 @@
     }
     
     Tanks.start_ws = (watching) => new Promise((r) => {
+        // Change this to ws://localhost:8010/ for local testing
         var ws = new WebSocket("wss://redwolfprograms.com/tanks/ws", watching ? ["watch"] : ["play"]);
         
         var was_on = 0;
-        
+
         ws.onopen = () => {
             was_on = 1;
             

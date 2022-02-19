@@ -272,10 +272,16 @@
                         if (data.c.length > 1024)
                             throw ["Maximum of 1024 chars for chat posts"];
                         
-                        data.c = (conn.protocol == "watch" ? "{" + conn.name + "} " : "[" + conn.name + "] ") + data.c;
+                        //data.c = (conn.protocol == "watch" ? "{" + conn.name + "} " : "[" + conn.name + "] ") + data.c;
                         
-                        rooms[conn.room].chat.push(data.c);
-                        rooms[conn.room].tick_logs.push(["c", data.c]);
+                        var to_send = [
+                            data.c, 
+                            conn.protocol == "watch" ? -1 : rooms[conn.room].tanks.find(t => t.id == conn.id)?.army ?? -1,
+                            conn.name
+                        ]
+
+                        rooms[conn.room].chat.push(to_send);
+                        rooms[conn.room].tick_logs.push(["c", to_send]);
                         
                         main_transcript.push([Date.now(), data.c]);
                         

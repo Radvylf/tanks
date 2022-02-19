@@ -199,9 +199,23 @@
         c_2d.textAlign = "left";
         c_2d.textBaseline = "top";
 
-        for (var i = 0; i < Tanks.chat().length; i++)
-            c_2d.fillText(Tanks.chat()[i], 12, 12 + i * (font * 1.25 | 0));
-        
+        for (var i = 0; i < Tanks.chat().length; i++) {
+            var message = Tanks.chat()[i];
+            var [text, army, username] = message;
+            var displayUsername = army == -1 ? `{${username}}` : `[${username}]`;
+            if(text[0] == '!') {
+                if(army !== Tanks.army()) continue;
+                text = text.slice(1);
+            }
+            c_2d.fillStyle = colors[army] ?? '#000';
+            c_2d.fillText(displayUsername, 12, 12 + i * (font * 1.25 | 0));
+
+            c_2d.fillStyle = '#000';
+            c_2d.fillText(
+                text, 
+                16 + c_2d.measureText(displayUsername).width, 
+                12 + i * (font * 1.25 | 0));
+        }
         if (Tanks.watching()) {
             c_2d.textBaseline = "bottom";
             
