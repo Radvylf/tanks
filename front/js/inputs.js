@@ -44,7 +44,7 @@
 
             if (id == "r") {
                 if (!Tanks.watching() && !Tanks.prompting() && Tanks.ws_on()) {
-                    var chat_input = await Tanks.prompt_for_input("Chat:");
+                    var chat_input = await Tanks.prompt_for_input("Team chat:");
 
                     if (chat_input && Tanks.ws_on()) {
                         Tanks.ws({
